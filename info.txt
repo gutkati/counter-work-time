@@ -1,0 +1,54 @@
+/work-tracker-app
+ ├── /public
+ │   ├── index.html           # Шаблон HTML
+ │   ├── favicon.ico
+ │
+ ├── /src
+ │   ├── /assets              # Статические файлы (иконки, изображения)
+ │   │   ├── /icons
+ │   │   ├── logo.svg
+ │   │
+ │   ├── /components          # Переиспользуемые UI-компоненты
+ │   │   ├── /Button
+ │   │   │   ├── Button.js
+ │   │   │   ├── Button.module.scss
+ │   │   │
+ │   │   ├── /Chart
+ │   │   │   ├── Chart.js
+ │   │   │   ├── Chart.module.scss
+ │   │   │
+ │   │   ├── /Modal
+ │   │   │   ├── Modal.js
+ │   │   │   ├── Modal.module.scss
+ │   │
+ │   ├── /pages               # Страницы приложения
+ │   │   ├── /Home
+ │   │   │   ├── Home.js
+ │   │   │   ├── Home.module.scss
+ │   │   │
+ │   │   ├── /Statistics
+ │   │   │   ├── Statistics.js
+ │   │   │   ├── Statistics.module.scss
+ │   │
+ │   ├── /hooks               # Кастомные хуки (например, useLocalStorage)
+ │   │   ├── useLocalStorage.js
+ │   │
+ │   ├── /context             # Глобальное хранилище (React Context API)
+ │   │   ├── WorkContext.js
+ │   │
+ │   ├── /utils               # Вспомогательные функции (форматирование, расчёты)
+ │   │   ├── timeUtils.js
+ │   │
+ │   ├── /styles              # Глобальные стили и SCSS-переменные
+ │   │   ├── _variables.scss  # Переменные SCSS (цвета, размеры)
+ │   │   ├── _mixins.scss     # Миксины SCSS
+ │   │   ├── _globals.scss    # Глобальные стили
+ │   │   ├── index.scss       # Основной SCSS-файл
+ │
+ │   ├── App.js               # Корневой компонент приложения
+ │   ├── index.js             # Точка входа React
+ │   ├── reportWebVitals.js
+ │
+ ├── package.json             # Зависимости проекта
+ ├── README.md                # Описание проекта
+ ├── .gitignore               # Файл игнорирования Git
