@@ -1,0 +1,107 @@
+@import "../../styles/variables";
+
+.header {
+  width: 100%;
+  display: flex;
+}
+
+.logo {
+
+  justify-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .logo_img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-image: url("../../assets/logo.png");
+    background-repeat: no-repeat;
+    background-size: 50px;
+    background-position: center;
+  }
+
+  .clock {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hand {
+    position: absolute;
+    right: 35%;
+    bottom: 40%;
+    width: 2px;
+    background-color: $light-green-color;
+    transform-origin: bottom;
+    display: none;
+  }
+
+  .hour_hand {
+    height: 13px;
+    transform: rotate(90deg);
+
+  }
+
+  .minute_hand {
+    height: 18px;
+    transform: rotate(180deg);
+  }
+
+  &:hover {
+    .hand {
+      display: inline-block;
+    }
+
+    .hour_hand {
+      animation: rotate-hour 24s linear infinite;
+    }
+
+    .minute_hand {
+      //animation: rotate-minute 3s steps(12) infinite; // Пошаговая анимация
+      animation: rotate-minute 2s linear infinite;
+    }
+  }
+
+  span {
+    margin-top: 5px;
+    color: #fff;
+    opacity: .6;
+    font-size: 14px;
+  }
+}
+
+.logo:first-child {
+  margin-right: auto;
+
+}
+
+.title {
+  flex: 1;
+  letter-spacing: 1.3px;
+
+  h1 {
+    color: $grey-color;
+    text-align: center;
+    font-size: 40px;
+    padding-top: 5px;
+  }
+}
+
+@keyframes rotate-hour {
+  100% {
+    transform: rotate(450deg);
+  }
+}
+
+@keyframes rotate-minute {
+  100% {
+    transform: rotate(540deg);
+  }
+}
+

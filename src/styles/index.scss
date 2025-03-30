@@ -1,0 +1,25 @@
+@import "variables";
+
+body, p, h1, h2, h3, h4, h5, h6, button {
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: $main-back-color;
+  font-family: sans-serif, Arial;
+}
+
+.app {
+  padding: 1rem;
+  margin: 0 auto;
+  width: 80%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
