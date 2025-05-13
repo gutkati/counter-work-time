@@ -12,14 +12,36 @@ body, p, h1, h2, h3, h4, h5, h6, button {
 body {
   background-color: $main-back-color;
   font-family: sans-serif, Arial;
+  height: 100%;
+  display: block;
 }
 
 .app {
   padding: 1rem;
   margin: 0 auto;
-  width: 80%;
+  width: 1080px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: space-between;
+  height: 100vh;
+}
+
+@media (max-width: 1420px) {
+  .app {
+    width: 80%;
+  }
+}
+
+@media (max-width: 1280px) {
+  .app {
+    width: 90%;
+  }
+}
+
+@media (max-width: 768px) {
+  .app {
+    width: 100%;
+  }
 }
 

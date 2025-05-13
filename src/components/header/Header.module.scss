@@ -20,6 +20,12 @@
     background-repeat: no-repeat;
     background-size: 50px;
     background-position: center;
+
+    @media (max-width: 1420px) {
+      width: 40px;
+      height: 40px;
+      background-size: 40px;
+    }
   }
 
   .clock {
@@ -30,6 +36,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+
+    @media (max-width: 1420px) {
+      width: 30px;
+      height: 30px;
+    }
   }
 
   .hand {
@@ -40,17 +51,29 @@
     background-color: $light-green-color;
     transform-origin: bottom;
     display: none;
+
+    @media (max-width: 1420px) {
+      right: 30%;
+      bottom: 35%;
+    }
   }
 
   .hour_hand {
     height: 13px;
     transform: rotate(90deg);
 
+    @media (max-width: 1420px) {
+      height: 10px;
+    }
   }
 
   .minute_hand {
     height: 18px;
     transform: rotate(180deg);
+
+    @media (max-width: 1420px) {
+      height: 15px;
+    }
   }
 
   &:hover {
@@ -73,12 +96,16 @@
     color: #fff;
     opacity: .6;
     font-size: 14px;
+    letter-spacing: 1px;
+
+    @media (max-width: 1420px) {
+      font-size: 12px;
+    }
   }
 }
 
 .logo:first-child {
   margin-right: auto;
-
 }
 
 .title {
@@ -86,10 +113,14 @@
   letter-spacing: 1.3px;
 
   h1 {
-    color: $grey-color;
+    color: $text-color;
     text-align: center;
-    font-size: 40px;
+    font-size: 36px;
     padding-top: 5px;
+
+    @media (max-width: 1420px) {
+      font-size: 28px;
+    }
   }
 }
 

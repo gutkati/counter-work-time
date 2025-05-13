@@ -1,0 +1,29 @@
+@import "../../../styles/variables";
+
+.button {
+  border: none;
+  width: 100%;
+  text-align: center;
+  box-sizing: border-box;
+  border-radius: 99px;
+  box-shadow: $box-shadow;
+  color: $text-color;
+  font-size: 18px;
+  padding: 15px 0;
+  //min-width: 150px;
+  //max-width: 380px;
+  transition: box-shadow .2s ease, background .1s ease;
+
+  &:hover {
+    cursor: pointer;
+  }
+
+  &:active {
+    box-shadow: none;
+  }
+
+  @media (max-width: 1420px) {
+    min-width: 150px;
+    max-width: 380px;
+  }
+}
