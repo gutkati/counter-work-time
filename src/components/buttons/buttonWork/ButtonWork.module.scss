@@ -26,4 +26,9 @@
     min-width: 150px;
     max-width: 380px;
   }
+
+  @media (max-width: 650px) {
+    font-size: 16px;
+    padding: 12px 0;
+  }
 }

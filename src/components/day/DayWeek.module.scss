@@ -1,12 +1,18 @@
 @import "../../styles/_variables.scss";
 
 .day__week {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background-color: #025A68;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: $box-shadow;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background-color: #025A68;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: $box-shadow;
+
+  @media (max-width: 650px) {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
 }
