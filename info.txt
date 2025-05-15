@@ -45,8 +45,8 @@
  │   │   ├── _globals.scss    # Глобальные стили
  │   │   ├── index.scss       # Основной SCSS-файл
  │
- │   ├── App.js               # Корневой компонент приложения
- │   ├── index.js             # Точка входа React
+ │   ├── App.tsx               # Корневой компонент приложения
+ │   ├── index.tsx             # Точка входа React
  │   ├── reportWebVitals.js
  │
  ├── package.json             # Зависимости проекта

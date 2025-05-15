@@ -1,7 +1,14 @@
 import React, {useState} from 'react';
 import styles from './ButtonWork.module.scss'
 
-const ButtonWork = ({color, hoverColor, text}) => {
+type ButtonProps = {
+  text: string;
+  color: string;
+  hoverColor: string;
+  onClick?: () => void;
+};
+
+const ButtonWork: React.FC<ButtonProps> = ({color, hoverColor, text}) => {
     const [bg, setBg] = useState(color)
 
     return (

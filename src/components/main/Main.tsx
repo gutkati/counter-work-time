@@ -1,12 +1,12 @@
 import React, {useState, useEffect} from 'react';
 import styles from './Main.module.scss';
 import ButtonWork from "../buttons/buttonWork/ButtonWork";
-import color from "../../styles/_variables.scss"
+import color from "../../styles/_variables.module.scss"
 import DayWeek from "../day/DayWeek";
 import {useMediaQuery} from "react-responsive";
 
 const Main = () => {
-    const [arrShowDays, setArrShowDays] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18])
+    const [arrShowDays, setArrShowDays] = useState<Date[]>([]);
 
     const isSmallScreen = useMediaQuery({maxWidth: 1120});
     const isTabletScreen = useMediaQuery({maxWidth: 834});
@@ -16,7 +16,7 @@ const Main = () => {
         setArrShowDays(getDaysRange())
     }, [isSmallScreen, isTabletScreen, isMobileScreen])
 
-    function getDaysRange() {
+    function getDaysRange():Date[] {
         const today = new Date()
         const dayOfWeek = today.getDay()
         const startOfCurrentWeek = new Date(today)
@@ -108,8 +108,8 @@ const Main = () => {
 
                                 <DayWeek
                                     key={index}
-                                    index={index}
-                                    date={date}
+                                    // index={index}
+                                    // date={date}
                                     //selectDay={selectDay}
                                     //onClick={() => handleDayClick(date)}
                                 />

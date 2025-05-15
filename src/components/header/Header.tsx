@@ -1,7 +1,11 @@
 import React from 'react';
 import styles from './Header.module.scss'
 
-const Header = ({text}) => {
+type HeaderProps = {
+    text: string;
+}
+
+const Header: React.FC<HeaderProps> = ({text}) => {
     return (
         <div className={styles.header}>
             <div className={styles.logo}>
