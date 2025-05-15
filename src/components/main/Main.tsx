@@ -7,26 +7,19 @@ import {useMediaQuery} from "react-responsive";
 
 const Main = () => {
     const [arrShowDays, setArrShowDays] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18])
+
     const isSmallScreen = useMediaQuery({maxWidth: 1120});
     const isTabletScreen = useMediaQuery({maxWidth: 834});
     const isMobileScreen = useMediaQuery({maxWidth: 650});
 
     useEffect(() => {
         setArrShowDays(getDaysRange())
-    }, [isSmallScreen])
-
-    useEffect(() => {
-        setArrShowDays(getDaysRange())
-    }, [isTabletScreen])
-
-    useEffect(() => {
-        setArrShowDays(getDaysRange())
-    }, [isMobileScreen])
+    }, [isSmallScreen, isTabletScreen, isMobileScreen])
 
     function getDaysRange() {
-        const today = new Date();
-        const dayOfWeek = today.getDay();
-        const startOfCurrentWeek = new Date(today);
+        const today = new Date()
+        const dayOfWeek = today.getDay()
+        const startOfCurrentWeek = new Date(today)
 
         // Определяем начало текущей недели (понедельник)
         startOfCurrentWeek.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1))
