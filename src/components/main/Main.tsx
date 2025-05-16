@@ -4,6 +4,7 @@ import ButtonWork from "../buttons/buttonWork/ButtonWork";
 import color from "../../styles/_variables.module.scss"
 import DayWeek from "../day/DayWeek";
 import {useMediaQuery} from "react-responsive";
+import {arrMonths} from "../../arrays/Arrays";
 
 const Main = () => {
     const [arrShowDays, setArrShowDays] = useState<Date[]>([]);
@@ -11,12 +12,27 @@ const Main = () => {
     const isSmallScreen = useMediaQuery({maxWidth: 1120});
     const isTabletScreen = useMediaQuery({maxWidth: 834});
     const isMobileScreen = useMediaQuery({maxWidth: 650});
+    const [showMonth, setShowMonth] = useState('')
+    const [numMonth, setNumMonth] = useState<number>()
 
     useEffect(() => {
         setArrShowDays(getDaysRange())
     }, [isSmallScreen, isTabletScreen, isMobileScreen])
 
-    function getDaysRange():Date[] {
+    useEffect(() => {
+        if (!arrMonths.length || !arrShowDays.length) return;
+
+        if (arrShowDays.length >= 18) {
+            getCurrentMonth(arrShowDays, arrMonths, 10);
+        } else if (arrShowDays.length >= 10) {
+            getCurrentMonth(arrShowDays, arrMonths, 6);
+        } else if (arrShowDays.length >= 7) {
+            getCurrentMonth(arrShowDays, arrMonths, 4);
+        }
+
+    }, [arrShowDays, arrMonths]);
+
+    function getDaysRange(): Date[] {
         const today = new Date()
         const dayOfWeek = today.getDay()
         const startOfCurrentWeek = new Date(today)
@@ -47,8 +63,7 @@ const Main = () => {
 
                 days.push(day)
             }
-        }
-         else if (isSmallScreen) {
+        } else if (isSmallScreen) {
             for (let i = 0; i < 14; i++) {
                 const day = new Date(startOfCurrentWeek)
                 day.setDate(startOfCurrentWeek.getDate() + i)
@@ -63,9 +78,77 @@ const Main = () => {
                 days.push(day)
             }
         }
+        setArrShowDays(days)
+
         return days
     }
 
+    // карусель календаря назад на 3 дня
+    function showPrevDays(): void {
+        let firstDayArr = arrShowDays[0] // первый день массива
+
+        for (let i = 1; i < 3; i++) {
+            const newDay = new Date(firstDayArr)
+            newDay.setDate(firstDayArr.getDate() - i)
+            arrShowDays.unshift(newDay)
+        }
+        let arrPrevDays
+        if (isMobileScreen) {
+            arrPrevDays = arrShowDays.slice(0, 7)
+        } else if (isTabletScreen) {
+            arrPrevDays = arrShowDays.slice(0, 10)
+        } else if (isSmallScreen) {
+            arrPrevDays = arrShowDays.slice(0, 14)
+        } else {
+            arrPrevDays = arrShowDays.slice(0, 18)
+        }
+
+        setArrShowDays(arrPrevDays)
+    }
+
+// карусель календаря вперед на 3 дня
+    function showNextDays(): void {
+        let lastDayArr = arrShowDays[arrShowDays.length - 1] // последний день массива
+
+        for (let i = 1; i < 3; i++) {
+            const newDay = new Date(lastDayArr)
+            newDay.setDate(lastDayArr.getDate() + i)
+            arrShowDays.push(newDay)
+        }
+
+        let arrPrevDays
+        if (isMobileScreen) {
+            arrPrevDays = arrShowDays.slice(-7)
+        } else if (isTabletScreen) {
+            arrPrevDays = arrShowDays.slice(-10)
+        } else if (isSmallScreen) {
+            arrPrevDays = arrShowDays.slice(-14)
+        } else {
+            arrPrevDays = arrShowDays.slice(-18)
+        }
+
+        setArrShowDays(arrPrevDays)
+    }
+
+    function getCurrentMonth(arrDate: Date[], arrMonths: string[], numDay: number) {
+        let countDay: Record<number, number> = {}
+        for (let date of arrDate) {
+            let month = date.getMonth()
+            countDay[month] = (countDay[month] || 0) + 1
+        }
+
+        for (let key in countDay) {
+            const count = countDay[+key];
+            if (count >= numDay) {
+                setNumMonth(+key)
+                setShowMonth(arrMonths[+key])
+                break
+            }
+        }
+    }
+
+    //console.log(arrShowDays)
+    console.log(numMonth)
     return (
         <div className={styles.main}>
             <div className={styles.box_button}>
@@ -109,24 +192,34 @@ const Main = () => {
                                 <DayWeek
                                     key={index}
                                     // index={index}
-                                    // date={date}
+                                    date={date}
                                     //selectDay={selectDay}
                                     //onClick={() => handleDayClick(date)}
                                 />
 
-                                <div className={styles.day__num}>
-                                    <span>15</span>
+                                <div className={`${styles.day__num}
+                                    ${date.getMonth() !== numMonth ? styles.day__pale : ''}
+                                `}>
+                                    <span>{date.getDate()}</span>
                                 </div>
                             </div>
                         ))}
                     </div>
                     <div className={styles.calendar__month}>
-                        <span>Апрель</span>
+                        <span>{showMonth}</span>
                     </div>
                 </div>
 
-                <button className={`${styles.chart__arrow} ${styles.chart__arrow_left}`}></button>
-                <button className={`${styles.chart__arrow} ${styles.chart__arrow_right}`}></button>
+                <button
+                    className={`${styles.chart__arrow} ${styles.chart__arrow_left}`}
+                    onClick={showPrevDays}
+                >
+                </button>
+                <button
+                    className={`${styles.chart__arrow} ${styles.chart__arrow_right}`}
+                    onClick={showNextDays}
+                >
+                </button>
 
             </div>
         </div>
