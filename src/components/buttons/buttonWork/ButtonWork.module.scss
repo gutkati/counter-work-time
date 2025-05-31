@@ -9,26 +9,36 @@
   box-shadow: $box-shadow;
   color: $text-color;
   font-size: 18px;
+  line-height: 20px;
   padding: 15px 0;
-  //min-width: 150px;
-  //max-width: 380px;
-  transition: box-shadow .2s ease, background .1s ease;
+  transition: all .3s ease;
 
   &:hover {
     cursor: pointer;
+    font-size: 20px;
   }
 
   &:active {
     box-shadow: none;
   }
 
+  &:disabled {
+    color: $text-color;
+    font-size: 18px;
+    box-shadow: $box-shadow;
+  }
+
   @media (max-width: 1420px) {
     min-width: 150px;
-    max-width: 380px;
+    max-width: 420px;
   }
 
   @media (max-width: 650px) {
     font-size: 16px;
     padding: 12px 0;
+
+    &:hover {
+      font-size: 18px;
+    }
   }
 }

@@ -1,8 +1,8 @@
 @import "../../styles/variables.module";
 
 .day__week {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
   background-color: #025A68;
   display: flex;
@@ -14,13 +14,14 @@
     width: 30px;
     height: 30px;
     font-size: 14px;
+    box-shadow: none;
   }
 
   &.mark__square {
     background-color: $orange-color;
   }
+}
 
-  &.off__square {
+.off__square {
     background-color: $main-back-color;
   }
-}

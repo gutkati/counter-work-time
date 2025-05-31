@@ -12,10 +12,11 @@ const Header: React.FC<HeaderProps> = ({text}) => {
                 <div className={styles.logo_img}>
                     <div className={styles.clock}>
                         <div className={`${styles.hour_hand} ${styles.hand}` }></div>
-                        <div className={`${styles.minute_hand} ${styles.hand}`}></div>
+                        <div className={`${styles.minute_hand} ${styles.hand}`}
+                        ></div>
                     </div>
                 </div>
-                <span>timer.prx.by</span>
+                <span>jtrack.prx.by</span>
             </div>
             <div className={styles.title}>
                 <h1>{text}</h1>

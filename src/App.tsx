@@ -6,7 +6,7 @@ import Main from "./components/main/Main";
 function App() {
     return (
         <div className="app">
-            <Header text="Счетчик рабочего времени"/>
+            <Header text="Трекер рабочего времени"/>
             <Main/>
             <Footer/>
         </div>

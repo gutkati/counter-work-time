@@ -120,10 +120,12 @@
 
     @media (max-width: 1420px) {
       font-size: 28px;
+      margin-right: 40px;
     }
 
     @media (max-width: 650px) {
       font-size: 20px;
+      margin-right: 0;
     }
   }
 }
