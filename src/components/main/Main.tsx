@@ -5,6 +5,7 @@ import color from "../../styles/_variables.module.scss";
 import DayWeek from "../day/DayWeek";
 import {useMediaQuery} from "react-responsive";
 import {arrMonths} from "../../arrays/Arrays";
+import EditTime from "../modal/EditTime";
 
 type TimerData = {
     date: string;
@@ -35,16 +36,30 @@ const Main = () => {
     const [savedSeconds, setSavedSeconds] = useState<number>(0); // Секунды, сохранённые до старта
     const [todayStr, setTodayStr] = useState(getLocalDateString(new Date()));
     const [startTime, setStartTime] = useState<number | null>(null); // Время старта таймера
-    let keyTimer: string = 'timerSeconds';
-
     const [currentDate, setCurrentDate] = useState(getLocalDateString(new Date()));
+
+    const currentDay: Date = new Date()
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+    const [isOpenModalEdit, setIsOpenModalEdit] = useState<boolean>(false);
+    const [hoursInput, setHoursInput] = useState<string>('0')
+    const [minutesInput, setMinutesInput] = useState<string>('0')
+
+    let keyTimer: string = 'timerSeconds';
+    const HOUR_HEIGHT_PX = 18; // 282 / 16 - 282 высота контейнера колонки, 16 max кол-во часов работы
+    const secondsInHour = 3600;
 
     //Проверка смены дня (интервал 1 минута)
     useEffect(() => {
 
         const checkDateChange = () => {
             const now: number = Date.now()
-            const nowDate: string = getLocalDateString(new Date());
+            const date: Date = new Date()
+            const nowDate: string = getLocalDateString(date);
+
+            // if (currentDate === todayStr) {
+            //     setSelectedDate(date); // автообновление даты
+            // }
 
             if (todayStr !== currentDate) {
                 saveSecondsLocal(nowDate, 0)
@@ -131,8 +146,7 @@ const Main = () => {
             getCurrentMonth(arrShowDays, arrMonths, 11)
         } else if (arrShowDays.length < 20 && arrShowDays.length >= 14) {
             getCurrentMonth(arrShowDays, arrMonths, 8)
-        }
-        else if (arrShowDays.length < 14 && arrShowDays.length >= 10) {
+        } else if (arrShowDays.length < 14 && arrShowDays.length >= 10) {
             getCurrentMonth(arrShowDays, arrMonths, 6)
         } else if (arrShowDays.length >= 7) {
             getCurrentMonth(arrShowDays, arrMonths, 4)
@@ -180,7 +194,6 @@ const Main = () => {
             updated.push({date, seconds})
         }
         saveDataLocalStorage(keyTimer, updated)
-
     }
 
     const startTimer = () => {
@@ -234,7 +247,7 @@ const Main = () => {
             }
         } else if (isSmallScreen) {
             for (let i = 0; i < 14; i++) {
-                const day = new Date(startOfCurrentWeek)
+                const day = new Date(startOfPreviousWeek)
                 day.setDate(startOfPreviousWeek.getDate() + i)
 
                 days.push(day)
@@ -248,7 +261,7 @@ const Main = () => {
             }
         }
         setArrShowDays(days)
-
+        console.log("arrDate", days)
         return days
     }
 
@@ -318,9 +331,56 @@ const Main = () => {
         }
     }
 
-    // const MAX_WORK_SECONDS = 16 * 3600
-    const HOUR_HEIGHT_PX = 23; // 384 / 16 - 450 высота контейнера колонки, 16 max кол-во часов работы
-    const secondsInHour = 3600;
+    function editTimeWork(date: Date) {
+        let calendarDays: Date[] = [...arrShowDays]
+        let markDay = calendarDays.find(d => d === date)
+        if (!markDay) return;
+
+        let dateStr = getLocalDateString(markDay)
+        const dataDay: TimerData[] = getDataLocalStorage(keyTimer)
+        let updated: TimerData[] = [...dataDay]
+
+
+        let savedDay = updated.find(d => d.date === dateStr)
+
+        if (savedDay) {
+            const hrs = Math.floor(savedDay.seconds / 3600).toString()
+            const mins = Math.floor((savedDay.seconds % 3600) / 60).toString()
+
+            setHoursInput(hrs)
+            setMinutesInput(mins)
+
+        } else {
+            setHoursInput('0')
+            setMinutesInput('0')
+        }
+
+    }
+
+    function handleInputChange(hours: string, minutes: string) {
+        const hrs = parseInt(hours, 10) || 0;
+        const mins = parseInt(minutes, 10) || 0;
+
+        const totalSeconds = hrs * 3600 + mins * 60;
+        const dateStr = getLocalDateString(selectedDate); // или currentDay?
+        saveSecondsLocal(dateStr, totalSeconds);
+        setIsOpenModalEdit(false); // Закрыть модалку
+    }
+
+    function closeModal():void {
+        setIsOpenModalEdit(false)
+    }
+
+    function handleDayClick(date: Date) {
+        if (date.getTime() <= currentDay.getTime()) {
+            setSelectedDate(date);
+            setIsOpenModalEdit(true)
+            editTimeWork(date)
+        } else {
+            // Если кликнули дату в будущем, можно установить текущую дату
+            setSelectedDate(currentDay);
+        }
+    }
 
     const getColumns = (date: Date) => {
         let arrData: TimerData[] = getDataLocalStorage(keyTimer)
@@ -337,14 +397,14 @@ const Main = () => {
                         className={styles.day__column}
                         style={{
                             height: `${columnHeight}px`,
-                            background: `${columnHeight < 90
+                            background: `${columnHeight < 80
                                 ? 'linear-gradient(to bottom, #FF9D79 0%, #FF6262 70%)'
-                                : columnHeight < 144
+                                : columnHeight < 110
                                     ? 'linear-gradient(to bottom, #D9D9D9 0%, #FF9D79 40%, #FF6262 70%)'
-                                    : columnHeight > 276 && columnHeight <= 315
+                                    : columnHeight > 216 && columnHeight <= 240
                                         ? 'linear-gradient(to top, #D9D9D9 90%, #FF9D79 100%)'
-                                        : columnHeight > 315
-                                            ? 'linear-gradient(to top, #D9D9D9 75%, #FF9D79 90%, #FF6262 100%)'
+                                        : columnHeight > 240
+                                            ? 'linear-gradient(to top, #D9D9D9 80%, #FF9D79 90%, #FF6262 100%)'
                                             : '#D9D9D9'
                             }`
                         }}>
@@ -397,6 +457,17 @@ const Main = () => {
                         <hr className={styles.time__bottom}/>
 
                     </div>
+
+                    <EditTime
+                        hours={hoursInput}
+                        minutes={minutesInput}
+                        isOpenModal={isOpenModalEdit}
+                        onClick={handleInputChange}
+                        onClose={closeModal}
+                        onHoursChange={setHoursInput}
+                        onMinutesChange={setMinutesInput}
+                    />
+
                 </div>
 
                 {/* section calendar*/}
@@ -413,6 +484,8 @@ const Main = () => {
                                 <DayWeek
                                     key={index}
                                     date={date}
+                                    onClick={handleDayClick}
+                                    selectedDate={selectedDate}
                                 />
 
                                 <div className={`${styles.day__num}
@@ -448,28 +521,28 @@ export default Main;
 
 
 // Обработка видимости вкладки (чтобы таймер не лагал)
-    // useEffect(() => {
-    //     //let lastHiddenTime = Date.now();
-    //
-    //     const handleVisibilityChange = () => {
-    //
-    //         // if (document.visibilityState === "hidden") {
-    //         //     lastHiddenTime = Date.now();
-    //         // }
-    //
-    //         if (document.visibilityState === "visible" && isRunning) {
-    //             const now = Date.now();
-    //         const hiddenDuration = Math.round((now - startTime!) / 1000);
-    //
-    //         const newSavedSeconds = savedSeconds + hiddenDuration
-    //
-    //         // Обновляем всё сразу и синхронно
-    //         setSavedSeconds(newSavedSeconds)
-    //         setStartTime(now)
-    //         setSeconds(newSavedSeconds)
-    //         }
-    //     };
-    //
-    //     document.addEventListener("visibilitychange", handleVisibilityChange);
-    //     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-    // }, [isRunning, startTime, savedSeconds]);
+// useEffect(() => {
+//     //let lastHiddenTime = Date.now();
+//
+//     const handleVisibilityChange = () => {
+//
+//         // if (document.visibilityState === "hidden") {
+//         //     lastHiddenTime = Date.now();
+//         // }
+//
+//         if (document.visibilityState === "visible" && isRunning) {
+//             const now = Date.now();
+//         const hiddenDuration = Math.round((now - startTime!) / 1000);
+//
+//         const newSavedSeconds = savedSeconds + hiddenDuration
+//
+//         // Обновляем всё сразу и синхронно
+//         setSavedSeconds(newSavedSeconds)
+//         setStartTime(now)
+//         setSeconds(newSavedSeconds)
+//         }
+//     };
+//
+//     document.addEventListener("visibilitychange", handleVisibilityChange);
+//     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+// }, [isRunning, startTime, savedSeconds]);

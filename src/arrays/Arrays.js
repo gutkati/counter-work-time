@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.arrDays = exports.arrMonths = void 0;
+//export const arrMonths:string[] = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сент', 'окт', 'ноя', 'дек',]
+exports.arrMonths = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',];
+exports.arrDays = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+let arrdateObj = [
+    { date: "2025-05-19", seconds: 5923 },
+    { date: "2025-05-20", seconds: 43260 },
+    { date: "2025-05-21", seconds: 3394 },
+    { date: "2025-05-22", seconds: 27975 },
+    { date: "2025-05-23", seconds: 29802 },
+    { date: "2025-05-26", seconds: 53689 },
+    { date: "2025-05-27", seconds: 24512 }
+];

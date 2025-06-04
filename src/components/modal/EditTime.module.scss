@@ -1,0 +1,124 @@
+@import "../../styles/variables.module";
+
+.edit__time {
+  position: absolute;
+  top: 95px;
+  z-index: 999;
+  min-width: 320px;
+  min-height: 200px;
+  padding: 15px;
+  border-radius: 15px;
+  background-color: $main-back-color;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+
+  &.visible {
+    display: flex;
+  }
+
+  & .title {
+    font-size: 16px;
+    font-family: sans-serif;
+
+  }
+
+  & .close {
+    width: 25px;
+    height: 25px;
+    border: none;
+    border-radius: 50%;
+    background-color: inherit;
+    background-image: url("../../assets/icons/close.png");
+    background-size: 15px;
+    background-position: center;
+    background-repeat: no-repeat;
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      cursor: pointer;
+      background-color: rgba(250, 250, 250, .2);
+    }
+
+    &:active {
+      background-color: rgba(250, 250, 250, .3);
+    }
+
+  }
+
+  & .form {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+
+    & .box__input {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0 20px;
+      width: 100%;
+
+      & label {
+        display: flex;
+        flex-direction: column;
+        font-size: 12px;
+        color: rgba(217, 217, 217, .7);
+
+        & .input {
+          width: 134px;
+          height: 36px;
+          font-size: 14px;
+          color: #000;
+          border: none;
+          border-radius: 5px;
+          padding: 10px;
+          background-color: #D9D9D9;
+          margin-top: 3px;
+          transition: all .2s ease;
+
+          &:focus {
+
+            box-shadow: 0 0 2px 2px #03D78D;
+            outline: none;
+          }
+        }
+      }
+
+      & .text__error {
+        height: 16px;
+        font-size: 12px;
+        color: $red-color;
+        padding-top: 3px;
+      }
+    }
+
+    & .btn {
+      width: 130px;
+      background-color: $light-green-color;
+      font-size: 14px;
+      border-radius: 15px;
+      padding: 10px;
+      color: #ffffff;
+      border: none;
+      transition: all .2s ease;
+
+      &:hover {
+        cursor: pointer;
+        background-color: #008080;
+      }
+
+      &:active {
+        background-color: #007171;
+      }
+    }
+  }
+}
+
+
+

@@ -9,6 +9,16 @@
   align-items: center;
   justify-content: center;
   box-shadow: $box-shadow;
+  transition: all .2s ease;
+
+  &:hover {
+    opacity: .9;
+    cursor: pointer;
+  }
+
+  &:active {
+    box-shadow: none;
+  }
 
   @media (max-width: 650px) {
     width: 30px;
@@ -23,5 +33,5 @@
 }
 
 .off__square {
-    background-color: $main-back-color;
-  }
+  background-color: $main-back-color;
+}
