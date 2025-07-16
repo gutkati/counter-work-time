@@ -19,7 +19,7 @@ body {
 .app {
   padding: 1rem;
   margin: 0 auto;
-  width: 1120px;
+  width: 1180px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -29,13 +29,13 @@ body {
 
 @media (max-width: 1420px) {
   .app {
-    width: 85%;
+    width: 90%;
   }
 }
 
 @media (max-width: 1280px) {
   .app {
-    width: 90%;
+    width: 92%;
   }
 }
 
@@ -44,4 +44,3 @@ body {
     width: 100%;
   }
 }
-

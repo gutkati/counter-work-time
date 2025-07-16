@@ -17,14 +17,13 @@ const DayWeek = ({ date, onClick, selectedDate }) => {
     const isCurrentDay = (0, react_1.useMemo)(() => {
         return currentDate.toDateString() === date.toDateString();
     }, [currentDate, date]);
-    const isSelected = selectedDate
-        ? selectedDate.toDateString() === date.toDateString() &&
-            selectedDate.getTime() <= currentDate.getTime()
-        : false;
-    const markSelectedDay = selectedDate ? isSelected : isCurrentDay;
+    // const isSelected = selectedDate
+    // ? selectedDate.toDateString() === date.toDateString() &&
+    //   selectedDate.getTime() <= currentDate.getTime()
+    // : false
+    //const markSelectedDay = selectedDate ? isSelected : isCurrentDay
     return ((0, jsx_runtime_1.jsx)("div", { className: `${DayWeek_module_scss_1.default.day__week}
-            ${markSelectedDay ? DayWeek_module_scss_1.default.mark__square : ''}
-           
+            ${isCurrentDay ? DayWeek_module_scss_1.default.mark__square : ''}
             ${dayOff === 6 || dayOff === 0 ? DayWeek_module_scss_1.default.off__square : ''}
             `, onClick: () => onClick === null || onClick === void 0 ? void 0 : onClick(date), children: (0, jsx_runtime_1.jsx)("span", { children: dayWeek }) }));
 };

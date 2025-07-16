@@ -50,6 +50,14 @@
 
   }
 
+  & .date {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+    color: rgba(250, 250, 250, .8);
+  }
+
   & .form {
     display: flex;
     flex-direction: column;
@@ -119,6 +127,3 @@
     }
   }
 }
-
-
-

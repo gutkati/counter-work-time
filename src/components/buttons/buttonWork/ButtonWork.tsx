@@ -20,12 +20,6 @@ const ButtonWork: React.FC<ButtonProps> = ({color, activeColor, text, textClick,
             style={isRunning
                 ? {background: activeColor,}
                 : {background: bg,}}
-            // onMouseEnter={() => {
-            //     setBg(activeColor);
-            // }}
-            // onMouseLeave={() => {
-            //     setBg(color);
-            // }}
             onClick={onClick}
             disabled={disabled}
         >

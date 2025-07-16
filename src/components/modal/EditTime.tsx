@@ -4,26 +4,53 @@ import styles from './EditTime.module.scss';
 type EditTimeProps = {
     hours: string;
     minutes: string;
+    selectedDate: Date;
     isOpenModal: boolean;
     onClick?: (hours: string, minutes: string) => void;
     onClose: () => void;
     onHoursChange: (value: string) => void;
     onMinutesChange: (value: string) => void;
+    onHoursCurrentMonth: () => void;
 }
 
 const EditTime: React.FC<EditTimeProps> = ({
                                                hours,
                                                minutes,
+                                               selectedDate,
                                                isOpenModal,
                                                onClick,
                                                onClose,
                                                onHoursChange,
-                                               onMinutesChange
+                                               onMinutesChange,
+                                               onHoursCurrentMonth
                                            }) => {
 
 
     const [errorHours, setErrorHours] = useState<string>('');
     const [errorMinutes, setErrorMinutes] = useState<string>('');
+    let day = getDay(selectedDate);
+    let month = getMonth(selectedDate)
+    let year = selectedDate.getFullYear();
+
+    function getDay(selectedDate: Date) {
+        if (!selectedDate) return
+        let day = selectedDate.getDate()
+        if (day < 10) {
+            return `0${day}`
+        } else {
+            return day
+        }
+    }
+
+    function getMonth(selectedDate: Date) {
+        if (!selectedDate) return
+        let month = selectedDate.getMonth() + 1
+        if (month < 10) {
+            return `0${month}`
+        } else {
+            return month
+        }
+    }
 
     const handleBlurHours = () => {
         if (!hours) return
@@ -74,6 +101,7 @@ const EditTime: React.FC<EditTimeProps> = ({
 
         if (validateHours(hours) && validateMinutes(minutes)) {
             onClick?.(hours, minutes)
+            onHoursCurrentMonth()
         }
     }
 
@@ -81,6 +109,10 @@ const EditTime: React.FC<EditTimeProps> = ({
         <div className={`${styles.edit__time} ${isOpenModal ? styles.visible : ''}`}>
             <h3 className={styles.title}>Редактировать время</h3>
             <button className={styles.close} onClick={onClose}></button>
+
+            <div className={styles.date}>
+                <span>{selectedDate ? `${day}.${month}.${year}` : ''}</span>
+            </div>
 
             <form className={styles.form}>
                 <div className={styles.box__input}>

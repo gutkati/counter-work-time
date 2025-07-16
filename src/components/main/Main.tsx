@@ -27,7 +27,7 @@ const Main = () => {
     const isSmallScreen = useMediaQuery({maxWidth: 1120});
     const isTabletScreen = useMediaQuery({maxWidth: 834});
     const isMobileScreen = useMediaQuery({maxWidth: 650});
-    const [showMonth, setShowMonth] = useState('');
+    const [showMonth, setShowMonth] = useState<string>('');
     const [numMonth, setNumMonth] = useState<number>();
 
     const [isInitialzed, setIsInitialzed] = useState(false);
@@ -38,12 +38,23 @@ const Main = () => {
     const [startTime, setStartTime] = useState<number | null>(null); // Время старта таймера
     const [currentDate, setCurrentDate] = useState(getLocalDateString(new Date()));
 
-    const currentDay: Date = new Date()
+    let currentDay: Date = new Date()
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
     const [isOpenModalEdit, setIsOpenModalEdit] = useState<boolean>(false);
-    const [hoursInput, setHoursInput] = useState<string>('0')
-    const [minutesInput, setMinutesInput] = useState<string>('0')
+    const [hoursInput, setHoursInput] = useState<string>('0');
+    const [minutesInput, setMinutesInput] = useState<string>('0');
+
+    const [textRest, setTextRest] = useState<string>('');
+    const [textWork, setTextWork] = useState<string>('Вы сейчас отдыхаете');
+
+    const [hoursPrevWeek, setHoursPrevWeek] = useState<string>('');
+    const [hoursPrevMonth, setHoursPrevMonth] = useState<string>('');
+
+    const [rangeStart, setRangeStart] = useState<Date | null>(null);
+    const [rangeEnd, setRangeEnd] = useState<Date | null>(null);
+    const [workedSeconds, setWorkedSeconds] = useState<number>(0)
+    const [isOpenToolkit, setIsOpenToolkit] = useState<boolean>(false);
 
     let keyTimer: string = 'timerSeconds';
     const HOUR_HEIGHT_PX = 18; // 282 / 16 - 282 высота контейнера колонки, 16 max кол-во часов работы
@@ -56,10 +67,6 @@ const Main = () => {
             const now: number = Date.now()
             const date: Date = new Date()
             const nowDate: string = getLocalDateString(date);
-
-            // if (currentDate === todayStr) {
-            //     setSelectedDate(date); // автообновление даты
-            // }
 
             if (todayStr !== currentDate) {
                 saveSecondsLocal(nowDate, 0)
@@ -74,7 +81,7 @@ const Main = () => {
 
         const interval = setInterval(() => {
             checkDateChange()
-        }, 10000);
+        }, 60000);
 
         return () => clearInterval(interval);
     }, [currentDate, seconds]);
@@ -91,7 +98,6 @@ const Main = () => {
 
         // Устанавливаем флаг, что данные загружены
         setIsInitialzed(true)
-
     }, [])
 
     useEffect(() => {
@@ -121,7 +127,7 @@ const Main = () => {
                 setSeconds(0)
                 setSavedSeconds(0)
                 setStartTime(now)
-                return;
+                return
             }
 
             setSeconds(totalSeconds)
@@ -154,6 +160,21 @@ const Main = () => {
 
     }, [arrShowDays, arrMonths])
 
+    useEffect(() => {
+        getHoursCurrentMonth()
+    }, [numMonth]);
+
+    useEffect(() => {
+        getHoursPrevWeek()
+    }, [currentDay]);
+
+    useEffect(() => {
+        if (rangeStart && rangeEnd) {
+            calculateWorkedSeconds()
+            setIsOpenToolkit(true)
+        }
+    }, [rangeStart, rangeEnd])
+
     // timer
     const formatNumber = (totalSeconds: number) => {
         const hrs = Math.floor(totalSeconds / 3600).toString().padStart(2, '0')
@@ -162,12 +183,12 @@ const Main = () => {
         return `${hrs}:${mins}:${secs}`
     }
 
-    const formatHours = (totalSeconds: number) => {
+    const formatHours = (totalSeconds: number): string => {
         const hrs = Math.floor(totalSeconds / 3600).toString()
         const mins = Math.floor((totalSeconds % 3600) / 60).toString()
 
         if (mins !== '0') {
-            return `${hrs}ч${mins}`
+            return `${hrs}ч${mins}м`
         } else {
             return `${hrs}ч`
         }
@@ -189,7 +210,6 @@ const Main = () => {
 
         if (savedDay) {
             savedDay.seconds = seconds
-            //savedSeconds(seconds)
         } else {
             updated.push({date, seconds})
         }
@@ -200,12 +220,14 @@ const Main = () => {
         setStartTime(Date.now())
         setSavedSeconds(seconds)
         setIsRunning(true)
-    };
+        setTextRest('Вы сейчас работаете')
+        setTextWork('')
+    }
 
     const stopTimer = () => {
-        if (!isRunning) return;
+        if (!isRunning) return
 
-        const now = Date.now();
+        const now = Date.now()
         const elapsedSeconds = Math.round((now - startTime!) / 1000)
         const totalSeconds = savedSeconds + elapsedSeconds
 
@@ -213,7 +235,10 @@ const Main = () => {
         setSeconds(totalSeconds)
         saveSecondsLocal(todayStr, totalSeconds)
         setIsRunning(false)
-    };
+        setTextWork('Вы сейчас отдыхаете')
+        setTextRest('')
+        getHoursCurrentMonth()
+    }
 
 // calendar
     function getDaysRange(): Date[] {
@@ -261,7 +286,6 @@ const Main = () => {
             }
         }
         setArrShowDays(days)
-        console.log("arrDate", days)
         return days
     }
 
@@ -354,7 +378,6 @@ const Main = () => {
             setHoursInput('0')
             setMinutesInput('0')
         }
-
     }
 
     function handleInputChange(hours: string, minutes: string) {
@@ -364,22 +387,132 @@ const Main = () => {
         const totalSeconds = hrs * 3600 + mins * 60;
         const dateStr = getLocalDateString(selectedDate); // или currentDay?
         saveSecondsLocal(dateStr, totalSeconds);
+
+        if (dateStr === currentDate) {
+            setSavedSeconds(totalSeconds)
+            setSeconds(totalSeconds)
+        }
         setIsOpenModalEdit(false); // Закрыть модалку
     }
 
-    function closeModal():void {
+    function closeModal(): void {
         setIsOpenModalEdit(false)
     }
 
     function handleDayClick(date: Date) {
-        if (date.getTime() <= currentDay.getTime()) {
-            setSelectedDate(date);
+        date.setHours(0, 0, 0, 0)
+        currentDay.setHours(0, 0, 0, 0)
+        if (date <= currentDay) {
+            setSelectedDate(date)
             setIsOpenModalEdit(true)
             editTimeWork(date)
-        } else {
-            // Если кликнули дату в будущем, можно установить текущую дату
-            setSelectedDate(currentDay);
         }
+    }
+
+    function getHoursCurrentMonth() {
+        const arrData: TimerData[] = getDataLocalStorage(keyTimer)
+
+        if (!arrData) return
+        let seconds = 0
+        arrData.filter((obj): void => {
+            const date = new Date(obj.date)
+            const month = date.getMonth()
+
+            if (month === numMonth) {
+                seconds += obj.seconds
+            }
+        })
+
+        setHoursPrevMonth(formatHours(seconds))
+    }
+
+    function getHoursPrevWeek() {
+        const arrData: TimerData[] = getDataLocalStorage(keyTimer)
+        if (!arrData) return
+
+        let seconds = 0
+        const today = new Date()
+
+        // Получаем понедельник текущей недели
+        const dayOfWeek = today.getDay() // 0 (вс) — 6 (сб)
+        const diffToMonday = (dayOfWeek + 6) % 7 // смещение к понедельнику
+        const startOfCurrentWeek = new Date(today)
+        startOfCurrentWeek.setDate(today.getDate() - diffToMonday)
+        startOfCurrentWeek.setHours(0, 0, 0, 0) // обязательно обнуляем!
+
+        // Получаем понедельник предыдущей недели
+        const startOfPreviousWeek = new Date(startOfCurrentWeek)
+        startOfPreviousWeek.setDate(startOfCurrentWeek.getDate() - 7)
+        startOfPreviousWeek.setHours(0, 0, 0, 0)
+
+        const endOfPreviousWeek = new Date(startOfPreviousWeek)
+        endOfPreviousWeek.setDate(startOfPreviousWeek.getDate() + 6)
+        endOfPreviousWeek.setHours(23, 59, 59, 999); // конец дня ВС
+
+        arrData.forEach(obj => {
+            const date = new Date(obj.date)
+
+            if (
+                date >= startOfPreviousWeek &&
+                date <= endOfPreviousWeek
+            ) {
+                seconds += obj.seconds
+            }
+        })
+        setHoursPrevWeek(formatHours(seconds))
+    }
+
+    // рассчитать время за выбранный диапазон
+    function handleDateClick(date: any) {
+
+        if (!rangeStart || (rangeStart && rangeEnd)) {
+            // если нет начала или оба выбраны — начинаем сначала
+            setRangeStart(date)
+            setIsOpenToolkit(false)
+            setRangeEnd(null)
+        } else if (date < rangeStart) {
+            setRangeEnd(rangeStart)
+            setRangeStart(date)
+
+        } else if (rangeStart && !rangeEnd) {
+            // если есть только начало — ставим конец
+            if (date > rangeStart) {
+                setRangeEnd(date)
+            } else {
+                // если выбрали дату раньше начала — делаем её началом
+                setRangeStart(date)
+                setIsOpenToolkit(false)
+            }
+        }
+    }
+
+    const calculateWorkedSeconds = () => {
+        if (!rangeStart || !rangeEnd) return
+
+        const arrData: TimerData[] = getDataLocalStorage(keyTimer) || []
+
+        // Нормализуем границы
+        const start = new Date(rangeStart)
+        const end = new Date(rangeEnd)
+        start.setHours(0, 0, 0, 0)
+        end.setHours(23, 59, 59, 999)
+
+        let totalSeconds = 0
+
+        arrData.forEach(item => {
+            const itemDate = new Date(item.date)
+            if (itemDate >= start && itemDate <= end) {
+                totalSeconds += item.seconds
+            }
+        });
+
+        setWorkedSeconds(totalSeconds)
+    };
+
+    function closeModalToolkit() {
+        setIsOpenToolkit(false)
+        setRangeStart(null)
+        setRangeEnd(null)
     }
 
     const getColumns = (date: Date) => {
@@ -387,7 +520,7 @@ const Main = () => {
         let newDate: string = getLocalDateString(date)
         let elDate: any = arrData.find(el => el.date === newDate)
 
-        if (elDate) {
+        if (elDate && elDate.seconds > 0) {
             const workedHours = elDate.seconds / secondsInHour
             const columnHeight = workedHours * HOUR_HEIGHT_PX
             return (
@@ -419,24 +552,33 @@ const Main = () => {
     return (
         <div className={styles.main}>
             <div className={styles.box_button}>
-                <ButtonWork
-                    color={color.orangeColor}
-                    activeColor={color.hoverColorWork}
-                    text="Начать работу"
-                    textClick='Работаю'
-                    onClick={startTimer}
-                    isRunning={isRunning}
-                    disabled={isRunning}
-                />
-                <ButtonWork
-                    color={color.hoverColorRest}
-                    activeColor={color.gradientButton}
-                    text="Отдыхаю"
-                    textClick='Прервать работу'
-                    onClick={stopTimer}
-                    isRunning={isRunning}
-                    disabled={!isRunning}
-                />
+                <div className={styles.button}>
+                    <ButtonWork
+                        color={color.orangeColor}
+                        activeColor={color.disabledColor}
+                        text="Начать работу"
+                        textClick='Работаю'
+                        onClick={startTimer}
+                        isRunning={isRunning}
+                        disabled={isRunning}
+                    />
+
+                    <span>{textWork}</span>
+                </div>
+
+                <div className={styles.button}>
+                    <ButtonWork
+                        color={color.disabledColor}
+                        activeColor={color.greenColor}
+                        text="Отдыхаю"
+                        textClick='Прервать работу'
+                        onClick={stopTimer}
+                        isRunning={isRunning}
+                        disabled={!isRunning}
+                    />
+
+                    <span>{textRest}</span>
+                </div>
             </div>
 
             {/* section chart*/}
@@ -461,12 +603,22 @@ const Main = () => {
                     <EditTime
                         hours={hoursInput}
                         minutes={minutesInput}
+                        selectedDate={selectedDate}
                         isOpenModal={isOpenModalEdit}
                         onClick={handleInputChange}
                         onClose={closeModal}
                         onHoursChange={setHoursInput}
                         onMinutesChange={setMinutesInput}
+                        onHoursCurrentMonth={getHoursCurrentMonth}
                     />
+
+                    <div className={`${styles.info__toolkit} ${isOpenToolkit ? styles.visible__toolkit : ''}`}>
+                        <button className={styles.close__toolkit} onClick={closeModalToolkit}></button>
+                        <p className={styles.text__toolkit}>
+                            С {rangeStart?.toLocaleDateString()} по {rangeEnd?.toLocaleDateString()} вы
+                            отработали {formatHours(workedSeconds)}
+                        </p>
+                    </div>
 
                 </div>
 
@@ -490,14 +642,25 @@ const Main = () => {
 
                                 <div className={`${styles.day__num}
                                     ${date.getMonth() !== numMonth ? styles.day__pale : ''}
-                                `}>
+                                    ${rangeStart === date ? styles.day__mark : ''}
+                                    ${rangeEnd === date ? styles.day__mark : ''}`}
+                                     onClick={() => handleDateClick(date)}
+                                >
                                     <span>{date.getDate()}</span>
                                 </div>
                             </div>
                         ))}
                     </div>
                     <div className={styles.calendar__month}>
-                        <span>{showMonth}</span>
+                        <div className={styles.hours}>
+                            <p className={styles.hours__prev}>Часы за прошлую неделю: <span>{hoursPrevWeek}</span></p>
+                        </div>
+
+                        <span className={styles.month}>{showMonth}</span>
+
+                        <div className={`${styles.hours} ${styles.hours_month}`}>
+                            <p className={styles.hours__prev}>Часы за {showMonth}: <span>{hoursPrevMonth}</span></p>
+                        </div>
                     </div>
                 </div>
 
@@ -511,38 +674,11 @@ const Main = () => {
                     onClick={showNextDays}
                 >
                 </button>
-
             </div>
+
+
         </div>
     );
 };
 
 export default Main;
-
-
-// Обработка видимости вкладки (чтобы таймер не лагал)
-// useEffect(() => {
-//     //let lastHiddenTime = Date.now();
-//
-//     const handleVisibilityChange = () => {
-//
-//         // if (document.visibilityState === "hidden") {
-//         //     lastHiddenTime = Date.now();
-//         // }
-//
-//         if (document.visibilityState === "visible" && isRunning) {
-//             const now = Date.now();
-//         const hiddenDuration = Math.round((now - startTime!) / 1000);
-//
-//         const newSavedSeconds = savedSeconds + hiddenDuration
-//
-//         // Обновляем всё сразу и синхронно
-//         setSavedSeconds(newSavedSeconds)
-//         setStartTime(now)
-//         setSeconds(newSavedSeconds)
-//         }
-//     };
-//
-//     document.addEventListener("visibilitychange", handleVisibilityChange);
-//     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-// }, [isRunning, startTime, savedSeconds]);
