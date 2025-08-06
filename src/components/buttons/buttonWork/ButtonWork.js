@@ -10,13 +10,6 @@ const ButtonWork = ({ color, activeColor, text, textClick, onClick, isRunning, d
     const [bg, setBg] = (0, react_1.useState)(color);
     return ((0, jsx_runtime_1.jsx)("button", { className: ButtonWork_module_scss_1.default.button, style: isRunning
             ? { background: activeColor, }
-            : { background: bg, }, 
-        // onMouseEnter={() => {
-        //     setBg(activeColor);
-        // }}
-        // onMouseLeave={() => {
-        //     setBg(color);
-        // }}
-        onClick: onClick, disabled: disabled, children: isRunning ? textClick : text }));
+            : { background: bg, }, onClick: onClick, disabled: disabled, children: isRunning ? textClick : text }));
 };
 exports.default = ButtonWork;

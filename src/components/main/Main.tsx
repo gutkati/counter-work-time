@@ -6,10 +6,20 @@ import DayWeek from "../day/DayWeek";
 import {useMediaQuery} from "react-responsive";
 import {arrMonths} from "../../arrays/Arrays";
 import EditTime from "../modal/EditTime";
+import {formatDate} from "../../utils/formatDate";
+import AddInterval from "../modal/AddInterval";
+
+type TimeInterval = {
+    id: number,
+    time: number,
+    start: number,
+    color: string,
+}
 
 type TimerData = {
     date: string;
     seconds: number;
+    timeIntervals: TimeInterval[];
 };
 
 const Main = () => {
@@ -56,6 +66,19 @@ const Main = () => {
     const [workedSeconds, setWorkedSeconds] = useState<number>(0)
     const [isOpenToolkit, setIsOpenToolkit] = useState<boolean>(false);
 
+    const [timeIntervals, setTimeIntervals] = useState<TimeInterval[]>([])
+
+    let [counterWeekDay, setCounterWeekDay] = useState<string>('')
+    let [counterMonthDay, setCounterMonthDay] = useState<string>('')
+
+    const [lastStopTime, setLastStopTime] = useState<number | null>(null);
+
+    const [isOpenModalAdd, setIsOpenModalAdd] = useState<boolean>(false)
+    const [startIntervalHours, setStartIntervalHours] = useState<number>(0)
+    const [starIntervaltMinutes, setStartIntervalMinutes] = useState<number>(0)
+    const [endIntervalHours, setEndIntervalHours] = useState<number>(0)
+    const [endIntervalMinutes, setEndIntervalMinutes] = useState<number>(0)
+
     let keyTimer: string = 'timerSeconds';
     const HOUR_HEIGHT_PX = 18; // 282 / 16 - 282 высота контейнера колонки, 16 max кол-во часов работы
     const secondsInHour = 3600;
@@ -69,7 +92,7 @@ const Main = () => {
             const nowDate: string = getLocalDateString(date);
 
             if (todayStr !== currentDate) {
-                saveSecondsLocal(nowDate, 0)
+                saveSecondsLocal(nowDate, 0, timeIntervals)
                 setTodayStr(nowDate)
                 setSeconds(0)
                 setSavedSeconds(0)
@@ -94,6 +117,7 @@ const Main = () => {
 
         if (todayData) {
             setSeconds(todayData.seconds)
+            setTimeIntervals(todayData.timeIntervals || [])
         }
 
         // Устанавливаем флаг, что данные загружены
@@ -101,7 +125,7 @@ const Main = () => {
     }, [])
 
     useEffect(() => {
-        if (isInitialzed) saveSecondsLocal(todayStr, seconds)
+        if (isInitialzed) saveSecondsLocal(todayStr, seconds, timeIntervals)
     }, [seconds]);
 
     // Основной эффект таймера
@@ -118,9 +142,9 @@ const Main = () => {
             if (currentDateStr !== todayStr) {
 
                 // Сохраняем старый день
-                saveSecondsLocal(todayStr, totalSeconds)
+                saveSecondsLocal(todayStr, totalSeconds, timeIntervals)
                 // сохраняем новый день
-                saveSecondsLocal(currentDateStr, 0)
+                saveSecondsLocal(currentDateStr, 0, timeIntervals)
 
                 // сброс таймера для новой даты
                 setTodayStr(currentDateStr)
@@ -203,20 +227,49 @@ const Main = () => {
         localStorage.setItem(key, JSON.stringify(data))
     }
 
-    function saveSecondsLocal(date: string, seconds: number) {
+    function saveSecondsLocal(date: string, seconds: number, timeIntervals: TimeInterval[]) {
         const data: TimerData[] = getDataLocalStorage(keyTimer)
         let updated: TimerData[] = [...data]
         let savedDay = updated.find(d => d.date === date)
 
         if (savedDay) {
             savedDay.seconds = seconds
+            savedDay.timeIntervals = timeIntervals
         } else {
-            updated.push({date, seconds})
+            updated.push({date, seconds, timeIntervals})
         }
         saveDataLocalStorage(keyTimer, updated)
     }
 
+    function deleteDayLocal(key: string, date: string) {
+        let arrDays = getDataLocalStorage(key)
+        arrDays = arrDays.filter(d => d.date !== date)
+        saveDataLocalStorage(key, arrDays)
+    }
+
     const startTimer = () => {
+        console.log('curentDateStart', currentDate)
+        const selectedDateStr = getLocalDateString(selectedDate)
+         if ( selectedDateStr !== todayStr) return;
+        const now = Date.now();
+
+        // Если был перерыв — логируем интервал отдыха
+        if (lastStopTime && selectedDateStr === todayStr) {
+            const restDuration = now - lastStopTime;
+            if (restDuration > 1000) {
+                const restLogItem = {
+                    id: Date.now(),
+                    time: restDuration,
+                    start: lastStopTime,
+                    color: color.greenColor // отдых
+                };
+
+
+                const updatedIntervals = saveIntervalTime(timeIntervals, restLogItem);
+                 setTimeIntervals(updatedIntervals);
+            }
+        }
+
         setStartTime(Date.now())
         setSavedSeconds(seconds)
         setIsRunning(true)
@@ -225,19 +278,37 @@ const Main = () => {
     }
 
     const stopTimer = () => {
-        if (!isRunning) return
+        console.log('curentDateStop', currentDate)
+        if (!isRunning || !startTime) return
+        const selectedDateStr = getLocalDateString(selectedDate)
 
         const now = Date.now()
-        const elapsedSeconds = Math.round((now - startTime!) / 1000)
+        const elapsedMs = now - startTime
+
+        const elapsedSeconds = Math.round(elapsedMs / 1000)
         const totalSeconds = savedSeconds + elapsedSeconds
+
+        if (selectedDateStr === todayStr) {
+            const newLogItem = {
+                id: Date.now(),
+                time: elapsedMs,
+                start: startTime,
+                color: color.orangeColor
+            }
+            const updatedIntervals = saveIntervalTime(timeIntervals, newLogItem);
+            setTimeIntervals(updatedIntervals)
+        }
+
 
         setSavedSeconds(totalSeconds)
         setSeconds(totalSeconds)
-        saveSecondsLocal(todayStr, totalSeconds)
+        saveSecondsLocal(todayStr, totalSeconds, timeIntervals)
         setIsRunning(false)
         setTextWork('Вы сейчас отдыхаете')
         setTextRest('')
         getHoursCurrentMonth()
+
+        setLastStopTime(now)
     }
 
 // calendar
@@ -386,9 +457,15 @@ const Main = () => {
 
         const totalSeconds = hrs * 3600 + mins * 60;
         const dateStr = getLocalDateString(selectedDate); // или currentDay?
-        saveSecondsLocal(dateStr, totalSeconds);
 
-        if (dateStr === currentDate) {
+        if (totalSeconds <= 0) {
+            deleteDayLocal(keyTimer, dateStr)
+            setTimeIntervals([])
+        } else {
+            saveSecondsLocal(dateStr, totalSeconds, timeIntervals);
+        }
+
+        if (dateStr === currentDate && totalSeconds > 0) {
             setSavedSeconds(totalSeconds)
             setSeconds(totalSeconds)
         }
@@ -397,6 +474,7 @@ const Main = () => {
 
     function closeModal(): void {
         setIsOpenModalEdit(false)
+        setIsOpenModalAdd(false)
     }
 
     function handleDayClick(date: Date) {
@@ -406,6 +484,7 @@ const Main = () => {
             setSelectedDate(date)
             setIsOpenModalEdit(true)
             editTimeWork(date)
+            getColumnDay(date)
         }
     }
 
@@ -414,23 +493,40 @@ const Main = () => {
 
         if (!arrData) return
         let seconds = 0
+        let counterDay = 0
+        let workDay = 0
+
         arrData.filter((obj): void => {
             const date = new Date(obj.date)
             const month = date.getMonth()
 
             if (month === numMonth) {
                 seconds += obj.seconds
+                counterDay += 1
+
+                if (obj.seconds > 0) {
+                    workDay += 1
+                }
             }
         })
 
         setHoursPrevMonth(formatHours(seconds))
+        if (seconds > 0 && workDay > 0) {
+            let sumCounterDay = seconds / workDay
+            setCounterMonthDay(formatHours(sumCounterDay))
+        } else {
+            setCounterMonthDay('0')
+        }
     }
 
     function getHoursPrevWeek() {
         const arrData: TimerData[] = getDataLocalStorage(keyTimer)
-        if (!arrData) return
+        if (!arrData || arrData.length === 0) return
 
         let seconds = 0
+        let counterDay = 0
+        let workDay = 0
+
         const today = new Date()
 
         // Получаем понедельник текущей недели
@@ -449,6 +545,7 @@ const Main = () => {
         endOfPreviousWeek.setDate(startOfPreviousWeek.getDate() + 6)
         endOfPreviousWeek.setHours(23, 59, 59, 999); // конец дня ВС
 
+
         arrData.forEach(obj => {
             const date = new Date(obj.date)
 
@@ -457,9 +554,24 @@ const Main = () => {
                 date <= endOfPreviousWeek
             ) {
                 seconds += obj.seconds
+                counterDay += 1
+
+                if (obj.seconds > 0) {
+                    workDay += 1
+                }
             }
+
+
         })
         setHoursPrevWeek(formatHours(seconds))
+
+        if (seconds > 0 && workDay > 0) {
+            let sumCounter = seconds / workDay
+            setCounterWeekDay(formatHours(sumCounter))
+        } else {
+            setCounterWeekDay('0')
+        }
+
     }
 
     // рассчитать время за выбранный диапазон
@@ -524,7 +636,7 @@ const Main = () => {
             const workedHours = elDate.seconds / secondsInHour
             const columnHeight = workedHours * HOUR_HEIGHT_PX
             return (
-                <div className={styles.calendar__column}>
+                <div className={styles.calendar__column} onClick={() => handleColumnClick(date)}>
                     <span className={styles.hours__work}>{formatHours(elDate.seconds)}</span>
                     <div
                         className={styles.day__column}
@@ -547,6 +659,116 @@ const Main = () => {
         } else {
             return <div className={styles.calendar__column}></div>
         }
+    }
+
+    // intervals
+
+    function handleColumnClick(date: Date) {
+        if (date <= currentDay) {
+            setSelectedDate(date)
+            getColumnDay(date)
+        }
+    }
+
+    function getColumnDay(date: Date) {
+
+        const dataDay: TimerData[] = getDataLocalStorage(keyTimer)
+        const currentData = dataDay.find(day => day.date === getLocalDateString(date))
+        if (currentData && currentData.timeIntervals) {
+            setTimeIntervals(currentData.timeIntervals)
+        } else {
+            setTimeIntervals([])
+        }
+    }
+
+
+    function saveIntervalTime(arrIntervals: TimeInterval[], newLogItem: TimeInterval) {
+        const update = [...(arrIntervals || []), newLogItem]
+        const dateStr = getLocalDateString(selectedDate)
+        saveIntervalLocal(dateStr, update)
+        return update
+    }
+
+    function saveIntervalLocal(date: string, timeIntervals: TimeInterval[]) {
+        const data: TimerData[] = getDataLocalStorage(keyTimer)
+        let updated: TimerData[] = [...data]
+        let savedDay = updated.find(d => d.date === date)
+
+        if (savedDay) {
+            savedDay.timeIntervals = timeIntervals
+        }
+        // else {
+        //     updated.push({date, seconds, timeIntervals})
+        // }
+        saveDataLocalStorage(keyTimer, updated)
+    }
+
+    function addInterval() {
+        setIsOpenModalAdd(true)
+        setStartIntervalHours(0)
+        setStartIntervalMinutes(0)
+        setEndIntervalHours(0)
+        setEndIntervalMinutes(0)
+    }
+
+    function handleAddNewInterval(
+        startHours: number,
+        startMinutes: number,
+        endHours: number,
+        endMinutes: number,
+        colorInterval: 'work' | 'rest',
+        forDate: Date
+    ) {
+// Создаём временные объекты для начала и конца
+//         const now = new Date();
+        const startDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), startHours, startMinutes);
+        const endDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), endHours, endMinutes);
+
+        // Разница в миллисекундах
+        const elapsedMs = endDate.getTime() - startDate.getTime();
+        const startInterval = startDate.getTime()
+        // Формируем время старта в формате HH:MM
+        // const startTime = `${String(startHours).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`;
+
+        // Собираем объект
+        const newLogItem = {
+            id: Date.now(),
+            time: elapsedMs,
+            start: startInterval,
+            color: colorInterval === 'work' ? color.orangeColor : color.greenColor
+        };
+
+        const addIntervals = saveIntervalTime(timeIntervals, newLogItem);
+        setTimeIntervals(addIntervals);
+        setIsOpenModalAdd(false); // Закрыть модалку
+    }
+
+    const getTimeIntervals = (id: number, time: number, start: number, color: string) => {
+
+        const seconds = time / 1000
+        let widthInPx = 50
+
+        if (seconds > 3600) {
+            widthInPx = Math.floor(seconds / 60)
+        }
+
+        const startTimeStr = start
+            ? new Date(start).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
+            : '';
+
+        return (
+
+            <div key={id}>
+                <span className={styles.time__interval}>{startTimeStr}</span>
+                <div
+                    className={styles.interval}
+                    style={{
+                        background: color,
+                        width: `${widthInPx}px`
+                    }}>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -654,13 +876,38 @@ const Main = () => {
                     <div className={styles.calendar__month}>
                         <div className={styles.hours}>
                             <p className={styles.hours__prev}>Часы за прошлую неделю: <span>{hoursPrevWeek}</span></p>
+                            <p className={styles.hours__prev}>Часы в среднем за день: <span>{counterWeekDay}</span></p>
                         </div>
 
                         <span className={styles.month}>{showMonth}</span>
 
                         <div className={`${styles.hours} ${styles.hours_month}`}>
                             <p className={styles.hours__prev}>Часы за {showMonth}: <span>{hoursPrevMonth}</span></p>
+                            <p className={styles.hours__prev}>Часы в среднем за день: <span>{counterMonthDay}</span>
+                            </p>
                         </div>
+                    </div>
+
+                    <div className={styles.calendar__intervals}>
+                        <div className={styles.calendar__intervals_date}>{formatDate(selectedDate)}</div>
+                        <div className={styles.calendar__intervals_field}>
+                            <div className={styles.calendar__intervals_box}>
+                                <div className={styles.calendar__intervals_container}>
+                                    {timeIntervals.map((int) => (
+
+                                        getTimeIntervals(int.id, int.time, int.start, int.color)
+                                    ))}
+                                </div>
+                            </div>
+                            <div
+                                className={styles.calendar__intervals_add}
+                                onClick={addInterval}
+                            >
+
+
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -676,7 +923,20 @@ const Main = () => {
                 </button>
             </div>
 
-
+            <AddInterval startHours={startIntervalHours}
+                         startMinutes={starIntervaltMinutes}
+                         endHours={endIntervalHours}
+                         endMinutes={endIntervalMinutes}
+                         selectedDate={selectedDate}
+                         isOpenModalAdd={isOpenModalAdd}
+                         onClick={handleAddNewInterval}
+                         onClose={closeModal}
+                         onStartHoursChange={setStartIntervalHours}
+                         onStartMinutesChange={setStartIntervalMinutes}
+                         onEndHoursChange={setEndIntervalHours}
+                         onEndMinutesChange={setEndIntervalMinutes}
+                         onHoursCurrentMonth={getHoursCurrentMonth}
+            />
         </div>
     );
 };

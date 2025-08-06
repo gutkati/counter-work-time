@@ -6,34 +6,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const jsx_runtime_1 = require("react/jsx-runtime");
 const react_1 = require("react");
 const EditTime_module_scss_1 = __importDefault(require("./EditTime.module.scss"));
+const formatDate_1 = require("../../utils/formatDate");
 const EditTime = ({ hours, minutes, selectedDate, isOpenModal, onClick, onClose, onHoursChange, onMinutesChange, onHoursCurrentMonth }) => {
     const [errorHours, setErrorHours] = (0, react_1.useState)('');
     const [errorMinutes, setErrorMinutes] = (0, react_1.useState)('');
-    let day = getDay(selectedDate);
-    let month = getMonth(selectedDate);
-    let year = selectedDate.getFullYear();
-    function getDay(selectedDate) {
-        if (!selectedDate)
-            return;
-        let day = selectedDate.getDate();
-        if (day < 10) {
-            return `0${day}`;
-        }
-        else {
-            return day;
-        }
-    }
-    function getMonth(selectedDate) {
-        if (!selectedDate)
-            return;
-        let month = selectedDate.getMonth() + 1;
-        if (month < 10) {
-            return `0${month}`;
-        }
-        else {
-            return month;
-        }
-    }
     const handleBlurHours = () => {
         if (!hours)
             return;
@@ -90,6 +66,6 @@ const EditTime = ({ hours, minutes, selectedDate, isOpenModal, onClick, onClose,
             onHoursCurrentMonth();
         }
     }
-    return ((0, jsx_runtime_1.jsxs)("div", { className: `${EditTime_module_scss_1.default.edit__time} ${isOpenModal ? EditTime_module_scss_1.default.visible : ''}`, children: [(0, jsx_runtime_1.jsx)("h3", { className: EditTime_module_scss_1.default.title, children: "\u0420\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0432\u0440\u0435\u043C\u044F" }), (0, jsx_runtime_1.jsx)("button", { className: EditTime_module_scss_1.default.close, onClick: onClose }), (0, jsx_runtime_1.jsx)("div", { className: EditTime_module_scss_1.default.date, children: (0, jsx_runtime_1.jsx)("span", { children: selectedDate ? `${day}.${month}.${year}` : '' }) }), (0, jsx_runtime_1.jsxs)("form", { className: EditTime_module_scss_1.default.form, children: [(0, jsx_runtime_1.jsxs)("div", { className: EditTime_module_scss_1.default.box__input, children: [(0, jsx_runtime_1.jsxs)("label", { htmlFor: "", children: ["\u0427\u0430\u0441\u044B", (0, jsx_runtime_1.jsx)("input", { type: "number", value: hours, onChange: (e) => onHoursChange(e.target.value), onBlur: handleBlurHours, className: `${EditTime_module_scss_1.default.input} ${EditTime_module_scss_1.default.input__hours}` }), (0, jsx_runtime_1.jsx)("span", { className: EditTime_module_scss_1.default.text__error, children: errorHours })] }), (0, jsx_runtime_1.jsxs)("label", { htmlFor: "", children: ["\u041C\u0438\u043D\u0443\u0442\u044B", (0, jsx_runtime_1.jsx)("input", { type: "number", value: minutes, onChange: (e) => onMinutesChange(e.target.value), onBlur: handleBlurMinutes, className: `${EditTime_module_scss_1.default.input} ${EditTime_module_scss_1.default.input__minutes}` }), (0, jsx_runtime_1.jsx)("span", { className: EditTime_module_scss_1.default.text__error, children: errorMinutes })] })] }), (0, jsx_runtime_1.jsx)("button", { type: 'button', className: EditTime_module_scss_1.default.btn, onClick: () => saveUpdateTime(hours, minutes), children: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C" })] })] }));
+    return ((0, jsx_runtime_1.jsxs)("div", { className: `${EditTime_module_scss_1.default.edit__time} ${isOpenModal ? EditTime_module_scss_1.default.visible : ''}`, children: [(0, jsx_runtime_1.jsx)("h3", { className: EditTime_module_scss_1.default.title, children: "\u0420\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0432\u0440\u0435\u043C\u044F" }), (0, jsx_runtime_1.jsx)("button", { className: EditTime_module_scss_1.default.close, onClick: onClose }), (0, jsx_runtime_1.jsx)("div", { className: EditTime_module_scss_1.default.date, children: (0, jsx_runtime_1.jsx)("span", { children: selectedDate ? (0, formatDate_1.formatDate)(selectedDate) : '' }) }), (0, jsx_runtime_1.jsxs)("form", { className: EditTime_module_scss_1.default.form, children: [(0, jsx_runtime_1.jsxs)("div", { className: EditTime_module_scss_1.default.box__input, children: [(0, jsx_runtime_1.jsxs)("label", { htmlFor: "", children: ["\u0427\u0430\u0441\u044B", (0, jsx_runtime_1.jsx)("input", { type: "number", value: hours, onChange: (e) => onHoursChange(e.target.value), onBlur: handleBlurHours, className: `${EditTime_module_scss_1.default.input} ${EditTime_module_scss_1.default.input__hours}` }), (0, jsx_runtime_1.jsx)("span", { className: EditTime_module_scss_1.default.text__error, children: errorHours })] }), (0, jsx_runtime_1.jsxs)("label", { htmlFor: "", children: ["\u041C\u0438\u043D\u0443\u0442\u044B", (0, jsx_runtime_1.jsx)("input", { type: "number", value: minutes, onChange: (e) => onMinutesChange(e.target.value), onBlur: handleBlurMinutes, className: `${EditTime_module_scss_1.default.input} ${EditTime_module_scss_1.default.input__minutes}` }), (0, jsx_runtime_1.jsx)("span", { className: EditTime_module_scss_1.default.text__error, children: errorMinutes })] })] }), (0, jsx_runtime_1.jsx)("button", { type: 'button', className: EditTime_module_scss_1.default.btn, onClick: () => saveUpdateTime(hours, minutes), children: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C" })] })] }));
 };
 exports.default = EditTime;

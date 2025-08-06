@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import styles from './EditTime.module.scss';
+import {formatDate} from '../../utils/formatDate'
 
 type EditTimeProps = {
     hours: string;
@@ -28,29 +29,6 @@ const EditTime: React.FC<EditTimeProps> = ({
 
     const [errorHours, setErrorHours] = useState<string>('');
     const [errorMinutes, setErrorMinutes] = useState<string>('');
-    let day = getDay(selectedDate);
-    let month = getMonth(selectedDate)
-    let year = selectedDate.getFullYear();
-
-    function getDay(selectedDate: Date) {
-        if (!selectedDate) return
-        let day = selectedDate.getDate()
-        if (day < 10) {
-            return `0${day}`
-        } else {
-            return day
-        }
-    }
-
-    function getMonth(selectedDate: Date) {
-        if (!selectedDate) return
-        let month = selectedDate.getMonth() + 1
-        if (month < 10) {
-            return `0${month}`
-        } else {
-            return month
-        }
-    }
 
     const handleBlurHours = () => {
         if (!hours) return
@@ -111,7 +89,7 @@ const EditTime: React.FC<EditTimeProps> = ({
             <button className={styles.close} onClick={onClose}></button>
 
             <div className={styles.date}>
-                <span>{selectedDate ? `${day}.${month}.${year}` : ''}</span>
+                <span>{selectedDate ?  formatDate(selectedDate) : ''}</span>
             </div>
 
             <form className={styles.form}>

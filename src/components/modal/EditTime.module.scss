@@ -18,10 +18,19 @@
     display: flex;
   }
 
+  &.edit__time_add {
+    top: 25%;
+    left: 42%;
+
+    @media (max-width: 1440px) {
+      left: 38%;
+    }
+  }
+
   & .title {
     font-size: 16px;
     font-family: sans-serif;
-
+    color: $text-color;
   }
 
   & .close {
@@ -104,6 +113,15 @@
         color: $red-color;
         padding-top: 3px;
       }
+    }
+
+    & .box__radio {
+      width: 100%;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      color: rgba(217, 217, 217, .8);
     }
 
     & .btn {

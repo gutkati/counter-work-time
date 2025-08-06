@@ -12,6 +12,8 @@ const DayWeek_1 = __importDefault(require("../day/DayWeek"));
 const react_responsive_1 = require("react-responsive");
 const Arrays_1 = require("../../arrays/Arrays");
 const EditTime_1 = __importDefault(require("../modal/EditTime"));
+const formatDate_1 = require("../../utils/formatDate");
+const AddInterval_1 = __importDefault(require("../modal/AddInterval"));
 const Main = () => {
     // получаем локальную дату
     const getLocalDateString = (date) => {
@@ -46,6 +48,15 @@ const Main = () => {
     const [rangeEnd, setRangeEnd] = (0, react_1.useState)(null);
     const [workedSeconds, setWorkedSeconds] = (0, react_1.useState)(0);
     const [isOpenToolkit, setIsOpenToolkit] = (0, react_1.useState)(false);
+    const [timeIntervals, setTimeIntervals] = (0, react_1.useState)([]);
+    let [counterWeekDay, setCounterWeekDay] = (0, react_1.useState)('');
+    let [counterMonthDay, setCounterMonthDay] = (0, react_1.useState)('');
+    const [lastStopTime, setLastStopTime] = (0, react_1.useState)(null);
+    const [isOpenModalAdd, setIsOpenModalAdd] = (0, react_1.useState)(false);
+    const [startIntervalHours, setStartIntervalHours] = (0, react_1.useState)(0);
+    const [starIntervaltMinutes, setStartIntervalMinutes] = (0, react_1.useState)(0);
+    const [endIntervalHours, setEndIntervalHours] = (0, react_1.useState)(0);
+    const [endIntervalMinutes, setEndIntervalMinutes] = (0, react_1.useState)(0);
     let keyTimer = 'timerSeconds';
     const HOUR_HEIGHT_PX = 18; // 282 / 16 - 282 высота контейнера колонки, 16 max кол-во часов работы
     const secondsInHour = 3600;
@@ -55,11 +66,8 @@ const Main = () => {
             const now = Date.now();
             const date = new Date();
             const nowDate = getLocalDateString(date);
-            // if (currentDate === todayStr) {
-            //     setSelectedDate(date); // автообновление даты
-            // }
             if (todayStr !== currentDate) {
-                saveSecondsLocal(nowDate, 0);
+                saveSecondsLocal(nowDate, 0, timeIntervals);
                 setTodayStr(nowDate);
                 setSeconds(0);
                 setSavedSeconds(0);
@@ -80,13 +88,14 @@ const Main = () => {
         const todayData = data.find(d => d.date === todayStr);
         if (todayData) {
             setSeconds(todayData.seconds);
+            setTimeIntervals(todayData.timeIntervals || []);
         }
         // Устанавливаем флаг, что данные загружены
         setIsInitialzed(true);
     }, []);
     (0, react_1.useEffect)(() => {
         if (isInitialzed)
-            saveSecondsLocal(todayStr, seconds);
+            saveSecondsLocal(todayStr, seconds, timeIntervals);
     }, [seconds]);
     // Основной эффект таймера
     (0, react_1.useEffect)(() => {
@@ -100,9 +109,9 @@ const Main = () => {
             let currentDateStr = getLocalDateString(new Date());
             if (currentDateStr !== todayStr) {
                 // Сохраняем старый день
-                saveSecondsLocal(todayStr, totalSeconds);
+                saveSecondsLocal(todayStr, totalSeconds, timeIntervals);
                 // сохраняем новый день
-                saveSecondsLocal(currentDateStr, 0);
+                saveSecondsLocal(currentDateStr, 0, timeIntervals);
                 // сброс таймера для новой даты
                 setTodayStr(currentDateStr);
                 setSeconds(0);
@@ -143,6 +152,12 @@ const Main = () => {
     (0, react_1.useEffect)(() => {
         getHoursPrevWeek();
     }, [currentDay]);
+    (0, react_1.useEffect)(() => {
+        if (rangeStart && rangeEnd) {
+            calculateWorkedSeconds();
+            setIsOpenToolkit(true);
+        }
+    }, [rangeStart, rangeEnd]);
     // timer
     const formatNumber = (totalSeconds) => {
         const hrs = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
@@ -167,20 +182,44 @@ const Main = () => {
     function saveDataLocalStorage(key, data) {
         localStorage.setItem(key, JSON.stringify(data));
     }
-    function saveSecondsLocal(date, seconds) {
+    function saveSecondsLocal(date, seconds, timeIntervals) {
         const data = getDataLocalStorage(keyTimer);
         let updated = [...data];
         let savedDay = updated.find(d => d.date === date);
         if (savedDay) {
             savedDay.seconds = seconds;
-            //savedSeconds(seconds)
+            savedDay.timeIntervals = timeIntervals;
         }
         else {
-            updated.push({ date, seconds });
+            updated.push({ date, seconds, timeIntervals });
         }
         saveDataLocalStorage(keyTimer, updated);
     }
+    function deleteDayLocal(key, date) {
+        let arrDays = getDataLocalStorage(key);
+        arrDays = arrDays.filter(d => d.date !== date);
+        saveDataLocalStorage(key, arrDays);
+    }
     const startTimer = () => {
+        console.log('curentDateStart', currentDate);
+        const selectedDateStr = getLocalDateString(selectedDate);
+        if (selectedDateStr !== todayStr)
+            return;
+        const now = Date.now();
+        // Если был перерыв — логируем интервал отдыха
+        if (lastStopTime && selectedDateStr === todayStr) {
+            const restDuration = now - lastStopTime;
+            if (restDuration > 1000) {
+                const restLogItem = {
+                    id: Date.now(),
+                    time: restDuration,
+                    start: lastStopTime,
+                    color: _variables_module_scss_1.default.greenColor // отдых
+                };
+                const updatedIntervals = saveIntervalTime(timeIntervals, restLogItem);
+                setTimeIntervals(updatedIntervals);
+            }
+        }
         setStartTime(Date.now());
         setSavedSeconds(seconds);
         setIsRunning(true);
@@ -188,18 +227,32 @@ const Main = () => {
         setTextWork('');
     };
     const stopTimer = () => {
-        if (!isRunning)
+        console.log('curentDateStop', currentDate);
+        if (!isRunning || !startTime)
             return;
+        const selectedDateStr = getLocalDateString(selectedDate);
         const now = Date.now();
-        const elapsedSeconds = Math.round((now - startTime) / 1000);
+        const elapsedMs = now - startTime;
+        const elapsedSeconds = Math.round(elapsedMs / 1000);
         const totalSeconds = savedSeconds + elapsedSeconds;
+        if (selectedDateStr === todayStr) {
+            const newLogItem = {
+                id: Date.now(),
+                time: elapsedMs,
+                start: startTime,
+                color: _variables_module_scss_1.default.orangeColor
+            };
+            const updatedIntervals = saveIntervalTime(timeIntervals, newLogItem);
+            setTimeIntervals(updatedIntervals);
+        }
         setSavedSeconds(totalSeconds);
         setSeconds(totalSeconds);
-        saveSecondsLocal(todayStr, totalSeconds);
+        saveSecondsLocal(todayStr, totalSeconds, timeIntervals);
         setIsRunning(false);
         setTextWork('Вы сейчас отдыхаете');
         setTextRest('');
         getHoursCurrentMonth();
+        setLastStopTime(now);
     };
     // calendar
     function getDaysRange() {
@@ -332,8 +385,14 @@ const Main = () => {
         const mins = parseInt(minutes, 10) || 0;
         const totalSeconds = hrs * 3600 + mins * 60;
         const dateStr = getLocalDateString(selectedDate); // или currentDay?
-        saveSecondsLocal(dateStr, totalSeconds);
-        if (dateStr === currentDate) {
+        if (totalSeconds <= 0) {
+            deleteDayLocal(keyTimer, dateStr);
+            setTimeIntervals([]);
+        }
+        else {
+            saveSecondsLocal(dateStr, totalSeconds, timeIntervals);
+        }
+        if (dateStr === currentDate && totalSeconds > 0) {
             setSavedSeconds(totalSeconds);
             setSeconds(totalSeconds);
         }
@@ -341,6 +400,7 @@ const Main = () => {
     }
     function closeModal() {
         setIsOpenModalEdit(false);
+        setIsOpenModalAdd(false);
     }
     function handleDayClick(date) {
         date.setHours(0, 0, 0, 0);
@@ -349,6 +409,7 @@ const Main = () => {
             setSelectedDate(date);
             setIsOpenModalEdit(true);
             editTimeWork(date);
+            getColumnDay(date);
         }
     }
     function getHoursCurrentMonth() {
@@ -356,20 +417,35 @@ const Main = () => {
         if (!arrData)
             return;
         let seconds = 0;
+        let counterDay = 0;
+        let workDay = 0;
         arrData.filter((obj) => {
             const date = new Date(obj.date);
             const month = date.getMonth();
             if (month === numMonth) {
                 seconds += obj.seconds;
+                counterDay += 1;
+                if (obj.seconds > 0) {
+                    workDay += 1;
+                }
             }
         });
         setHoursPrevMonth(formatHours(seconds));
+        if (seconds > 0 && workDay > 0) {
+            let sumCounterDay = seconds / workDay;
+            setCounterMonthDay(formatHours(sumCounterDay));
+        }
+        else {
+            setCounterMonthDay('0');
+        }
     }
     function getHoursPrevWeek() {
         const arrData = getDataLocalStorage(keyTimer);
-        if (!arrData)
+        if (!arrData || arrData.length === 0)
             return;
         let seconds = 0;
+        let counterDay = 0;
+        let workDay = 0;
         const today = new Date();
         // Получаем понедельник текущей недели
         const dayOfWeek = today.getDay(); // 0 (вс) — 6 (сб)
@@ -389,9 +465,20 @@ const Main = () => {
             if (date >= startOfPreviousWeek &&
                 date <= endOfPreviousWeek) {
                 seconds += obj.seconds;
+                counterDay += 1;
+                if (obj.seconds > 0) {
+                    workDay += 1;
+                }
             }
         });
         setHoursPrevWeek(formatHours(seconds));
+        if (seconds > 0 && workDay > 0) {
+            let sumCounter = seconds / workDay;
+            setCounterWeekDay(formatHours(sumCounter));
+        }
+        else {
+            setCounterWeekDay('0');
+        }
     }
     // рассчитать время за выбранный диапазон
     function handleDateClick(date) {
@@ -440,12 +527,6 @@ const Main = () => {
         setRangeStart(null);
         setRangeEnd(null);
     }
-    (0, react_1.useEffect)(() => {
-        if (rangeStart && rangeEnd) {
-            calculateWorkedSeconds();
-            setIsOpenToolkit(true);
-        }
-    }, [rangeStart, rangeEnd]);
     const getColumns = (date) => {
         let arrData = getDataLocalStorage(keyTimer);
         let newDate = getLocalDateString(date);
@@ -453,7 +534,7 @@ const Main = () => {
         if (elDate && elDate.seconds > 0) {
             const workedHours = elDate.seconds / secondsInHour;
             const columnHeight = workedHours * HOUR_HEIGHT_PX;
-            return ((0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__column, children: [(0, jsx_runtime_1.jsx)("span", { className: Main_module_scss_1.default.hours__work, children: formatHours(elDate.seconds) }), (0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.day__column, style: {
+            return ((0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__column, onClick: () => handleColumnClick(date), children: [(0, jsx_runtime_1.jsx)("span", { className: Main_module_scss_1.default.hours__work, children: formatHours(elDate.seconds) }), (0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.day__column, style: {
                             height: `${columnHeight}px`,
                             background: `${columnHeight < 80
                                 ? 'linear-gradient(to bottom, #FF9D79 0%, #FF6262 70%)'
@@ -470,9 +551,86 @@ const Main = () => {
             return (0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__column });
         }
     };
+    // intervals
+    function handleColumnClick(date) {
+        if (date <= currentDay) {
+            setSelectedDate(date);
+            getColumnDay(date);
+        }
+    }
+    function getColumnDay(date) {
+        const dataDay = getDataLocalStorage(keyTimer);
+        const currentData = dataDay.find(day => day.date === getLocalDateString(date));
+        if (currentData && currentData.timeIntervals) {
+            setTimeIntervals(currentData.timeIntervals);
+        }
+        else {
+            setTimeIntervals([]);
+        }
+    }
+    function saveIntervalTime(arrIntervals, newLogItem) {
+        const update = [...(arrIntervals || []), newLogItem];
+        const dateStr = getLocalDateString(selectedDate);
+        saveIntervalLocal(dateStr, update);
+        return update;
+    }
+    function saveIntervalLocal(date, timeIntervals) {
+        const data = getDataLocalStorage(keyTimer);
+        let updated = [...data];
+        let savedDay = updated.find(d => d.date === date);
+        if (savedDay) {
+            savedDay.timeIntervals = timeIntervals;
+        }
+        // else {
+        //     updated.push({date, seconds, timeIntervals})
+        // }
+        saveDataLocalStorage(keyTimer, updated);
+    }
+    function addInterval() {
+        setIsOpenModalAdd(true);
+        setStartIntervalHours(0);
+        setStartIntervalMinutes(0);
+        setEndIntervalHours(0);
+        setEndIntervalMinutes(0);
+    }
+    function handleAddNewInterval(startHours, startMinutes, endHours, endMinutes, colorInterval, forDate) {
+        // Создаём временные объекты для начала и конца
+        //         const now = new Date();
+        const startDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), startHours, startMinutes);
+        const endDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), endHours, endMinutes);
+        // Разница в миллисекундах
+        const elapsedMs = endDate.getTime() - startDate.getTime();
+        const startInterval = startDate.getTime();
+        // Формируем время старта в формате HH:MM
+        // const startTime = `${String(startHours).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`;
+        // Собираем объект
+        const newLogItem = {
+            id: Date.now(),
+            time: elapsedMs,
+            start: startInterval,
+            color: colorInterval === 'work' ? _variables_module_scss_1.default.orangeColor : _variables_module_scss_1.default.greenColor
+        };
+        const addIntervals = saveIntervalTime(timeIntervals, newLogItem);
+        setTimeIntervals(addIntervals);
+        setIsOpenModalAdd(false); // Закрыть модалку
+    }
+    const getTimeIntervals = (id, time, start, color) => {
+        const seconds = time / 1000;
+        let widthInPx = 50;
+        if (seconds > 3600) {
+            widthInPx = Math.floor(seconds / 60);
+        }
+        const startTimeStr = start
+            ? new Date(start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : '';
+        return ((0, jsx_runtime_1.jsxs)("div", { children: [(0, jsx_runtime_1.jsx)("span", { className: Main_module_scss_1.default.time__interval, children: startTimeStr }), (0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.interval, style: {
+                        background: color,
+                        width: `${widthInPx}px`
+                    } })] }, id));
+    };
     return ((0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.main, children: [(0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.box_button, children: [(0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.button, children: [(0, jsx_runtime_1.jsx)(ButtonWork_1.default, { color: _variables_module_scss_1.default.orangeColor, activeColor: _variables_module_scss_1.default.disabledColor, text: "\u041D\u0430\u0447\u0430\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u0443", textClick: '\u0420\u0430\u0431\u043E\u0442\u0430\u044E', onClick: startTimer, isRunning: isRunning, disabled: isRunning }), (0, jsx_runtime_1.jsx)("span", { children: textWork })] }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.button, children: [(0, jsx_runtime_1.jsx)(ButtonWork_1.default, { color: _variables_module_scss_1.default.disabledColor, activeColor: _variables_module_scss_1.default.greenColor, text: "\u041E\u0442\u0434\u044B\u0445\u0430\u044E", textClick: '\u041F\u0440\u0435\u0440\u0432\u0430\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u0443', onClick: stopTimer, isRunning: isRunning, disabled: !isRunning }), (0, jsx_runtime_1.jsx)("span", { children: textRest })] })] }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.chart, children: [(0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.chart_field, children: [(0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.timer, children: formatNumber(seconds) }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.time, children: [(0, jsx_runtime_1.jsxs)("p", { children: ["16", (0, jsx_runtime_1.jsx)("span", { children: "\u0447" })] }), (0, jsx_runtime_1.jsx)("hr", { className: Main_module_scss_1.default.time__top }), (0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsxs)("p", { children: ["8", (0, jsx_runtime_1.jsx)("span", { children: "\u0447" })] }) }), (0, jsx_runtime_1.jsxs)("p", { children: ["1", (0, jsx_runtime_1.jsx)("span", { children: "\u0447" })] }), (0, jsx_runtime_1.jsx)("hr", { className: Main_module_scss_1.default.time__bottom })] }), (0, jsx_runtime_1.jsx)(EditTime_1.default, { hours: hoursInput, minutes: minutesInput, selectedDate: selectedDate, isOpenModal: isOpenModalEdit, onClick: handleInputChange, onClose: closeModal, onHoursChange: setHoursInput, onMinutesChange: setMinutesInput, onHoursCurrentMonth: getHoursCurrentMonth }), (0, jsx_runtime_1.jsxs)("div", { className: `${Main_module_scss_1.default.info__toolkit} ${isOpenToolkit ? Main_module_scss_1.default.visible__toolkit : ''}`, children: [(0, jsx_runtime_1.jsx)("button", { className: Main_module_scss_1.default.close__toolkit, onClick: closeModalToolkit }), (0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.text__toolkit, children: ["\u0421 ", rangeStart === null || rangeStart === void 0 ? void 0 : rangeStart.toLocaleDateString(), " \u043F\u043E ", rangeEnd === null || rangeEnd === void 0 ? void 0 : rangeEnd.toLocaleDateString(), " \u0432\u044B \u043E\u0442\u0440\u0430\u0431\u043E\u0442\u0430\u043B\u0438 ", formatHours(workedSeconds)] })] })] }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar, children: [(0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__container, children: arrShowDays.map((date, index) => ((0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__day, children: [getColumns(date), (0, jsx_runtime_1.jsx)(DayWeek_1.default, { date: date, onClick: handleDayClick, selectedDate: selectedDate }, index), (0, jsx_runtime_1.jsx)("div", { className: `${Main_module_scss_1.default.day__num}
                                     ${date.getMonth() !== numMonth ? Main_module_scss_1.default.day__pale : ''}
                                     ${rangeStart === date ? Main_module_scss_1.default.day__mark : ''}
-                                    ${rangeEnd === date ? Main_module_scss_1.default.day__mark : ''}`, onClick: () => handleDateClick(date), children: (0, jsx_runtime_1.jsx)("span", { children: date.getDate() }) })] }, index))) }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__month, children: [(0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.hours, children: (0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0437\u0430 \u043F\u0440\u043E\u0448\u043B\u0443\u044E \u043D\u0435\u0434\u0435\u043B\u044E: ", (0, jsx_runtime_1.jsx)("span", { children: hoursPrevWeek })] }) }), (0, jsx_runtime_1.jsx)("span", { className: Main_module_scss_1.default.month, children: showMonth }), (0, jsx_runtime_1.jsx)("div", { className: `${Main_module_scss_1.default.hours} ${Main_module_scss_1.default.hours_month}`, children: (0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0437\u0430 ", showMonth, ": ", (0, jsx_runtime_1.jsx)("span", { children: hoursPrevMonth })] }) })] })] }), (0, jsx_runtime_1.jsx)("button", { className: `${Main_module_scss_1.default.chart__arrow} ${Main_module_scss_1.default.chart__arrow_left}`, onClick: showPrevDays }), (0, jsx_runtime_1.jsx)("button", { className: `${Main_module_scss_1.default.chart__arrow} ${Main_module_scss_1.default.chart__arrow_right}`, onClick: showNextDays })] })] }));
+                                    ${rangeEnd === date ? Main_module_scss_1.default.day__mark : ''}`, onClick: () => handleDateClick(date), children: (0, jsx_runtime_1.jsx)("span", { children: date.getDate() }) })] }, index))) }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__month, children: [(0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.hours, children: [(0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0437\u0430 \u043F\u0440\u043E\u0448\u043B\u0443\u044E \u043D\u0435\u0434\u0435\u043B\u044E: ", (0, jsx_runtime_1.jsx)("span", { children: hoursPrevWeek })] }), (0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0432 \u0441\u0440\u0435\u0434\u043D\u0435\u043C \u0437\u0430 \u0434\u0435\u043D\u044C: ", (0, jsx_runtime_1.jsx)("span", { children: counterWeekDay })] })] }), (0, jsx_runtime_1.jsx)("span", { className: Main_module_scss_1.default.month, children: showMonth }), (0, jsx_runtime_1.jsxs)("div", { className: `${Main_module_scss_1.default.hours} ${Main_module_scss_1.default.hours_month}`, children: [(0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0437\u0430 ", showMonth, ": ", (0, jsx_runtime_1.jsx)("span", { children: hoursPrevMonth })] }), (0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0432 \u0441\u0440\u0435\u0434\u043D\u0435\u043C \u0437\u0430 \u0434\u0435\u043D\u044C: ", (0, jsx_runtime_1.jsx)("span", { children: counterMonthDay })] })] })] }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__intervals, children: [(0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__intervals_date, children: (0, formatDate_1.formatDate)(selectedDate) }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__intervals_field, children: [(0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__intervals_box, children: (0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__intervals_container, children: timeIntervals.map((int) => (getTimeIntervals(int.id, int.time, int.start, int.color))) }) }), (0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__intervals_add, onClick: addInterval })] })] })] }), (0, jsx_runtime_1.jsx)("button", { className: `${Main_module_scss_1.default.chart__arrow} ${Main_module_scss_1.default.chart__arrow_left}`, onClick: showPrevDays }), (0, jsx_runtime_1.jsx)("button", { className: `${Main_module_scss_1.default.chart__arrow} ${Main_module_scss_1.default.chart__arrow_right}`, onClick: showNextDays })] }), (0, jsx_runtime_1.jsx)(AddInterval_1.default, { startHours: startIntervalHours, startMinutes: starIntervaltMinutes, endHours: endIntervalHours, endMinutes: endIntervalMinutes, selectedDate: selectedDate, isOpenModalAdd: isOpenModalAdd, onClick: handleAddNewInterval, onClose: closeModal, onStartHoursChange: setStartIntervalHours, onStartMinutesChange: setStartIntervalMinutes, onEndHoursChange: setEndIntervalHours, onEndMinutesChange: setEndIntervalMinutes, onHoursCurrentMonth: getHoursCurrentMonth })] }));
 };
 exports.default = Main;
