@@ -32,6 +32,8 @@ const Main = () => {
         return `${year}-${month}-${day}`;
     };
 
+    let keyTimer: string = 'timerSeconds';
+
     const [arrShowDays, setArrShowDays] = useState<Date[]>([]);
 
     const isSmallScreen = useMediaQuery({maxWidth: 1120});
@@ -78,8 +80,19 @@ const Main = () => {
     const [starIntervaltMinutes, setStartIntervalMinutes] = useState<number>(0)
     const [endIntervalHours, setEndIntervalHours] = useState<number>(0)
     const [endIntervalMinutes, setEndIntervalMinutes] = useState<number>(0)
+    const [intervalType, setIntervalType] = useState<'work' | 'rest'>('work');
+    const [editingInterval, setEditingInterval] = useState<TimeInterval | null>(null);
+    const [daysData, setDaysData] = useState<TimerData[]>(() => getDataLocalStorage(keyTimer));
 
-    let keyTimer: string = 'timerSeconds';
+    const colorToType = (color: string): 'work' | 'rest' => {
+        return color === '#FF9D79' ? 'work' : 'rest'
+    }
+
+    const typeToColor = (type: 'work' | 'rest'): string => {
+        return type === 'work' ? '#FF9D79' : '#018c79'
+    }
+
+
     const HOUR_HEIGHT_PX = 18; // 282 / 16 - 282 высота контейнера колонки, 16 max кол-во часов работы
     const secondsInHour = 3600;
 
@@ -125,8 +138,10 @@ const Main = () => {
     }, [])
 
     useEffect(() => {
-        if (isInitialzed) saveSecondsLocal(todayStr, seconds, timeIntervals)
-    }, [seconds]);
+        if (isInitialzed && getLocalDateString(selectedDate) === todayStr) {
+            saveSecondsLocal(todayStr, seconds, timeIntervals);
+        }
+    }, [seconds, timeIntervals, isInitialzed, selectedDate]);
 
     // Основной эффект таймера
     useEffect(() => {
@@ -199,6 +214,23 @@ const Main = () => {
         }
     }, [rangeStart, rangeEnd])
 
+    // useEffect(() => {
+    //     if (!selectedDate) return;
+    //     const dataDay: TimerData[] = getDataLocalStorage(keyTimer);
+    //     const currentData = dataDay.find(day => day.date === getLocalDateString(selectedDate));
+    //     if (currentData && currentData.timeIntervals) {
+    //         setTimeIntervals(currentData.timeIntervals);
+    //     } else {
+    //         setTimeIntervals([]);
+    //     }
+    // }, [selectedDate]);
+
+    useEffect(() => {
+        if (!selectedDate) return;
+        const currentDay = daysData.find(day => day.date === getLocalDateString(selectedDate));
+        setTimeIntervals(currentDay?.timeIntervals || []);
+    }, [selectedDate, daysData]);
+
     // timer
     const formatNumber = (totalSeconds: number) => {
         const hrs = Math.floor(totalSeconds / 3600).toString().padStart(2, '0')
@@ -249,12 +281,19 @@ const Main = () => {
 
     const startTimer = () => {
         console.log('curentDateStart', currentDate)
-        const selectedDateStr = getLocalDateString(selectedDate)
-         if ( selectedDateStr !== todayStr) return;
+
+        const selectedDateStr = getLocalDateString(currentDay)
+
+        if (isRunning && selectedDateStr === todayStr) return;
         const now = Date.now();
 
+        // Берём актуальные интервалы для текущего дня
+        const dataDay: TimerData[] = getDataLocalStorage(keyTimer);
+        const currentData = dataDay.find(day => day.date === selectedDateStr);
+        const actualIntervals = currentData?.timeIntervals || [];
+
         // Если был перерыв — логируем интервал отдыха
-        if (lastStopTime && selectedDateStr === todayStr) {
+        if (lastStopTime) {
             const restDuration = now - lastStopTime;
             if (restDuration > 1000) {
                 const restLogItem = {
@@ -265,8 +304,16 @@ const Main = () => {
                 };
 
 
-                const updatedIntervals = saveIntervalTime(timeIntervals, restLogItem);
-                 setTimeIntervals(updatedIntervals);
+                const updatedIntervals = saveIntervalTime(actualIntervals, restLogItem, new Date());
+                // Обновляем state только если выбран todayStr
+                if (getLocalDateString(selectedDate) === todayStr) {
+                    setTimeIntervals(updatedIntervals);
+                }
+            }
+        } else {
+            // Просто актуализируем, но тоже только если выбран сегодня
+            if (getLocalDateString(selectedDate) === todayStr) {
+                setTimeIntervals(actualIntervals);
             }
         }
 
@@ -279,30 +326,45 @@ const Main = () => {
 
     const stopTimer = () => {
         console.log('curentDateStop', currentDate)
+
+        const selectedDateStr = getLocalDateString(currentDay)
         if (!isRunning || !startTime) return
-        const selectedDateStr = getLocalDateString(selectedDate)
 
         const now = Date.now()
         const elapsedMs = now - startTime
-
         const elapsedSeconds = Math.round(elapsedMs / 1000)
         const totalSeconds = savedSeconds + elapsedSeconds
 
-        if (selectedDateStr === todayStr) {
-            const newLogItem = {
-                id: Date.now(),
-                time: elapsedMs,
-                start: startTime,
-                color: color.orangeColor
-            }
-            const updatedIntervals = saveIntervalTime(timeIntervals, newLogItem);
-            setTimeIntervals(updatedIntervals)
+        // Берём актуальные интервалы для выбранного дня
+        const dataDay: TimerData[] = getDataLocalStorage(keyTimer);
+        const currentData = dataDay.find(day => day.date === todayStr);
+        const actualIntervals = currentData?.timeIntervals || [];
+
+        const newLogItem = {
+            id: Date.now(),
+            time: elapsedMs,
+            start: startTime,
+            color: color.orangeColor
+        }
+        const updatedIntervals = saveIntervalTime(actualIntervals, newLogItem, new Date());
+
+
+        saveSecondsLocal(todayStr, totalSeconds, updatedIntervals)
+// В state заливаем ТОЛЬКО если выбран именно сегодняшний день
+        if (getLocalDateString(selectedDate) === todayStr) {
+            setTimeIntervals(updatedIntervals);
         }
 
+        // Актуализируем daysData (чтобы при клике по дням данные не затирались)
+        const updatedDays = dataDay.map(day =>
+            day.date === todayStr
+                ? {...day, seconds: totalSeconds, timeIntervals: updatedIntervals}
+                : day
+        );
+        setDaysData(updatedDays);
 
         setSavedSeconds(totalSeconds)
         setSeconds(totalSeconds)
-        saveSecondsLocal(todayStr, totalSeconds, timeIntervals)
         setIsRunning(false)
         setTextWork('Вы сейчас отдыхаете')
         setTextRest('')
@@ -664,6 +726,13 @@ const Main = () => {
     // intervals
 
     function handleColumnClick(date: Date) {
+        const dateStr = getLocalDateString(date);
+        // Блокируем только если это сегодня и таймер запущен
+        if (isRunning && dateStr === todayStr) {
+            alert("Нельзя редактировать активный день, таймер запущен");
+            return;
+        }
+
         if (date <= currentDay) {
             setSelectedDate(date)
             getColumnDay(date)
@@ -671,20 +740,20 @@ const Main = () => {
     }
 
     function getColumnDay(date: Date) {
+        setSelectedDate(date); // только меняем дату
+        const dataDay: TimerData[] = getDataLocalStorage(keyTimer);
+        const currentData = dataDay.find(day => day.date === getLocalDateString(date));
 
-        const dataDay: TimerData[] = getDataLocalStorage(keyTimer)
-        const currentData = dataDay.find(day => day.date === getLocalDateString(date))
         if (currentData && currentData.timeIntervals) {
-            setTimeIntervals(currentData.timeIntervals)
+            setTimeIntervals(currentData.timeIntervals);
         } else {
-            setTimeIntervals([])
+            setTimeIntervals([]);
         }
     }
 
-
-    function saveIntervalTime(arrIntervals: TimeInterval[], newLogItem: TimeInterval) {
+    function saveIntervalTime(arrIntervals: TimeInterval[], newLogItem: TimeInterval, forDate: Date) {
         const update = [...(arrIntervals || []), newLogItem]
-        const dateStr = getLocalDateString(selectedDate)
+        const dateStr = getLocalDateString(forDate)
         saveIntervalLocal(dateStr, update)
         return update
     }
@@ -704,6 +773,7 @@ const Main = () => {
     }
 
     function addInterval() {
+        setIntervalType('work')
         setIsOpenModalAdd(true)
         setStartIntervalHours(0)
         setStartIntervalMinutes(0)
@@ -711,7 +781,21 @@ const Main = () => {
         setEndIntervalMinutes(0)
     }
 
-    function handleAddNewInterval(
+    function handleUpdateInterval(id: number) {
+
+        let currentInterval = timeIntervals.find(interval => interval.id === id)
+        if (currentInterval) {
+            setIntervalType(colorToType(currentInterval.color))
+            setEditingInterval(currentInterval); // сохраняем что редактируем
+            setStartIntervalHours(new Date(currentInterval.start).getHours());
+            setStartIntervalMinutes(new Date(currentInterval.start).getMinutes());
+            setEndIntervalHours(new Date(currentInterval.start + currentInterval.time).getHours());
+            setEndIntervalMinutes(new Date(currentInterval.start + currentInterval.time).getMinutes());
+            setIsOpenModalAdd(true);
+        }
+    }
+
+    function handleSaveInterval(
         startHours: number,
         startMinutes: number,
         endHours: number,
@@ -719,32 +803,65 @@ const Main = () => {
         colorInterval: 'work' | 'rest',
         forDate: Date
     ) {
-// Создаём временные объекты для начала и конца
-//         const now = new Date();
-        const startDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), startHours, startMinutes);
-        const endDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), endHours, endMinutes);
 
-        // Разница в миллисекундах
-        const elapsedMs = endDate.getTime() - startDate.getTime();
-        const startInterval = startDate.getTime()
-        // Формируем время старта в формате HH:MM
-        // const startTime = `${String(startHours).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`;
+        const dateStr = getLocalDateString(forDate);
 
-        // Собираем объект
-        const newLogItem = {
-            id: Date.now(),
-            time: elapsedMs,
-            start: startInterval,
-            color: colorInterval === 'work' ? color.orangeColor : color.greenColor
-        };
+        if (isRunning && dateStr === todayStr) {
+            alert("Нельзя редактировать активный день, таймер запущен");
+            return;
+        }
 
-        const addIntervals = saveIntervalTime(timeIntervals, newLogItem);
-        setTimeIntervals(addIntervals);
-        setIsOpenModalAdd(false); // Закрыть модалку
+        const dayIndex = daysData.findIndex(day => day.date === dateStr);
+        const day = daysData[dayIndex] ?? {date: dateStr, seconds: 0, timeIntervals: []};
+        let intervals = [...day.timeIntervals];
+
+        // Если всё по нулям → удалить
+        if (startHours === 0 && startMinutes === 0 && endHours === 0 && endMinutes === 0) {
+            if (editingInterval) {
+                intervals = intervals.filter(int => int.id !== editingInterval.id);
+                setEditingInterval(null);
+            }
+        } else if (editingInterval) {
+            // === Редактирование ===
+            const startDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), startHours, startMinutes);
+            const endDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), endHours, endMinutes);
+            const elapsedMs = endDate.getTime() - startDate.getTime();
+
+            intervals = intervals.map(int =>
+                int.id === editingInterval.id
+                    ? {...int, start: startDate.getTime(), time: elapsedMs, color: typeToColor(colorInterval)}
+                    : int
+            );
+
+            setEditingInterval(null);
+        } else {
+            // === Добавление ===
+            const startDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), startHours, startMinutes);
+            const endDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), endHours, endMinutes);
+            const elapsedMs = endDate.getTime() - startDate.getTime();
+
+            const newLogItem: TimeInterval = {
+                id: Date.now(),
+                time: elapsedMs,
+                start: startDate.getTime(),
+                color: typeToColor(colorInterval),
+            };
+
+            intervals = saveIntervalTime(intervals, newLogItem, forDate);
+        }
+
+        // Обновляем state
+        const updatedDays = [...daysData];
+        updatedDays[dayIndex] = {...day, timeIntervals: intervals};
+        setDaysData(updatedDays);
+
+        // Сохраняем в localStorage
+        saveSecondsLocal(dateStr, day?.seconds ?? 0, intervals);
+
+        setIsOpenModalAdd(false);
     }
 
     const getTimeIntervals = (id: number, time: number, start: number, color: string) => {
-
         const seconds = time / 1000
         let widthInPx = 50
 
@@ -765,7 +882,9 @@ const Main = () => {
                     style={{
                         background: color,
                         width: `${widthInPx}px`
-                    }}>
+                    }}
+                    onClick={() => handleUpdateInterval(id)}
+                >
                 </div>
             </div>
         )
@@ -929,13 +1048,16 @@ const Main = () => {
                          endMinutes={endIntervalMinutes}
                          selectedDate={selectedDate}
                          isOpenModalAdd={isOpenModalAdd}
-                         onClick={handleAddNewInterval}
+                         onClick={handleSaveInterval}
                          onClose={closeModal}
                          onStartHoursChange={setStartIntervalHours}
                          onStartMinutesChange={setStartIntervalMinutes}
                          onEndHoursChange={setEndIntervalHours}
                          onEndMinutesChange={setEndIntervalMinutes}
                          onHoursCurrentMonth={getHoursCurrentMonth}
+                         intervalType={intervalType}
+                         onIntervalTypeChange={setIntervalType}
+
             />
         </div>
     );

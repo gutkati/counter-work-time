@@ -16,6 +16,8 @@ type AddIntervalProps = {
     onEndHoursChange: (value: number) => void;
     onEndMinutesChange: (value: number) => void;
     onHoursCurrentMonth: () => void;
+    intervalType: 'work' | 'rest';
+    onIntervalTypeChange: (value: 'work' | 'rest') => void;
 }
 
 const AddInterval: React.FC<AddIntervalProps> = ({
@@ -31,12 +33,14 @@ const AddInterval: React.FC<AddIntervalProps> = ({
                                                      onStartMinutesChange,
                                                      onEndHoursChange,
                                                      onEndMinutesChange,
-                                                     onHoursCurrentMonth
+                                                     onHoursCurrentMonth,
+                                                     intervalType,
+                                                     onIntervalTypeChange
                                                  }) => {
 
     const [errorHours, setErrorHours] = useState<string>('');
     const [errorMinutes, setErrorMinutes] = useState<string>('');
-    const [intervalType, setIntervalType] = useState<'work' | 'rest'>('work');
+
 
     // const [hoursEnd, setHoursEnd] = useState<number>()
 
@@ -79,7 +83,7 @@ const AddInterval: React.FC<AddIntervalProps> = ({
     }
 
     function saveUpdateTime(startHours: number, startMinutes: number, endHours: number, endMinutes: number, intervalType: 'work' | 'rest', selectedDate: Date) {
-        if (!startHours || !startMinutes || !endHours || !endMinutes || !selectedDate) return
+        if (!selectedDate) return
 
         if (validateHours(startHours) && validateMinutes(startMinutes)) {
             onClick?.(startHours, startMinutes, endHours, endMinutes, intervalType, selectedDate)
@@ -89,11 +93,11 @@ const AddInterval: React.FC<AddIntervalProps> = ({
     return (
         <div className={`${styles.edit__time} ${styles.edit__time_add} ${isOpenModalAdd ? styles.visible : ''}`}>
 
-            {/*<div className={styles.date}>*/}
-            {/*    <span>{selectedDate ? formatDate(selectedDate) : ''}</span>*/}
-            {/*</div>*/}
+            <div className={styles.date}>
+                <span>{selectedDate ? formatDate(selectedDate) : ''}</span>
+            </div>
 
-            <h3 className={styles.title}>Начало интервала</h3>
+            <h3 className={styles.title}>Время начало интервала</h3>
             <button className={styles.close} onClick={onClose}></button>
 
             <form className={styles.form}>
@@ -122,7 +126,7 @@ const AddInterval: React.FC<AddIntervalProps> = ({
                     </label>
                 </div>
 
-                <h3 className={styles.title}>Окончание интервала</h3>
+                <h3 className={styles.title}>Время окончание интервала</h3>
                 <div className={styles.box__input}>
                     <label htmlFor="">
                         Часы
@@ -155,7 +159,7 @@ const AddInterval: React.FC<AddIntervalProps> = ({
                             name='intervaleType'
                             value='work'
                             checked={intervalType === 'work'}
-                            onChange={() => setIntervalType('work')}
+                            onChange={() => onIntervalTypeChange('work')}
                         />
                         Работа
                     </label>
@@ -165,7 +169,7 @@ const AddInterval: React.FC<AddIntervalProps> = ({
                                name='intervaleType'
                                value='rest'
                                checked={intervalType === 'rest'}
-                               onChange={() => setIntervalType('rest')}/>
+                               onChange={() => onIntervalTypeChange('rest')}/>
                         Отдых
                     </label>
 

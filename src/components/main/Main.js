@@ -22,6 +22,7 @@ const Main = () => {
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     };
+    let keyTimer = 'timerSeconds';
     const [arrShowDays, setArrShowDays] = (0, react_1.useState)([]);
     const isSmallScreen = (0, react_responsive_1.useMediaQuery)({ maxWidth: 1120 });
     const isTabletScreen = (0, react_responsive_1.useMediaQuery)({ maxWidth: 834 });
@@ -57,7 +58,15 @@ const Main = () => {
     const [starIntervaltMinutes, setStartIntervalMinutes] = (0, react_1.useState)(0);
     const [endIntervalHours, setEndIntervalHours] = (0, react_1.useState)(0);
     const [endIntervalMinutes, setEndIntervalMinutes] = (0, react_1.useState)(0);
-    let keyTimer = 'timerSeconds';
+    const [intervalType, setIntervalType] = (0, react_1.useState)('work');
+    const [editingInterval, setEditingInterval] = (0, react_1.useState)(null);
+    const [daysData, setDaysData] = (0, react_1.useState)(() => getDataLocalStorage(keyTimer));
+    const colorToType = (color) => {
+        return color === '#FF9D79' ? 'work' : 'rest';
+    };
+    const typeToColor = (type) => {
+        return type === 'work' ? '#FF9D79' : '#018c79';
+    };
     const HOUR_HEIGHT_PX = 18; // 282 / 16 - 282 высота контейнера колонки, 16 max кол-во часов работы
     const secondsInHour = 3600;
     //Проверка смены дня (интервал 1 минута)
@@ -94,9 +103,10 @@ const Main = () => {
         setIsInitialzed(true);
     }, []);
     (0, react_1.useEffect)(() => {
-        if (isInitialzed)
+        if (isInitialzed && getLocalDateString(selectedDate) === todayStr) {
             saveSecondsLocal(todayStr, seconds, timeIntervals);
-    }, [seconds]);
+        }
+    }, [seconds, timeIntervals, isInitialzed, selectedDate]);
     // Основной эффект таймера
     (0, react_1.useEffect)(() => {
         if (!isRunning)
@@ -158,6 +168,22 @@ const Main = () => {
             setIsOpenToolkit(true);
         }
     }, [rangeStart, rangeEnd]);
+    // useEffect(() => {
+    //     if (!selectedDate) return;
+    //     const dataDay: TimerData[] = getDataLocalStorage(keyTimer);
+    //     const currentData = dataDay.find(day => day.date === getLocalDateString(selectedDate));
+    //     if (currentData && currentData.timeIntervals) {
+    //         setTimeIntervals(currentData.timeIntervals);
+    //     } else {
+    //         setTimeIntervals([]);
+    //     }
+    // }, [selectedDate]);
+    (0, react_1.useEffect)(() => {
+        if (!selectedDate)
+            return;
+        const currentDay = daysData.find(day => day.date === getLocalDateString(selectedDate));
+        setTimeIntervals((currentDay === null || currentDay === void 0 ? void 0 : currentDay.timeIntervals) || []);
+    }, [selectedDate, daysData]);
     // timer
     const formatNumber = (totalSeconds) => {
         const hrs = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
@@ -202,12 +228,16 @@ const Main = () => {
     }
     const startTimer = () => {
         console.log('curentDateStart', currentDate);
-        const selectedDateStr = getLocalDateString(selectedDate);
-        if (selectedDateStr !== todayStr)
+        const selectedDateStr = getLocalDateString(currentDay);
+        if (isRunning && selectedDateStr === todayStr)
             return;
         const now = Date.now();
+        // Берём актуальные интервалы для текущего дня
+        const dataDay = getDataLocalStorage(keyTimer);
+        const currentData = dataDay.find(day => day.date === selectedDateStr);
+        const actualIntervals = (currentData === null || currentData === void 0 ? void 0 : currentData.timeIntervals) || [];
         // Если был перерыв — логируем интервал отдыха
-        if (lastStopTime && selectedDateStr === todayStr) {
+        if (lastStopTime) {
             const restDuration = now - lastStopTime;
             if (restDuration > 1000) {
                 const restLogItem = {
@@ -216,8 +246,17 @@ const Main = () => {
                     start: lastStopTime,
                     color: _variables_module_scss_1.default.greenColor // отдых
                 };
-                const updatedIntervals = saveIntervalTime(timeIntervals, restLogItem);
-                setTimeIntervals(updatedIntervals);
+                const updatedIntervals = saveIntervalTime(actualIntervals, restLogItem, new Date());
+                // Обновляем state только если выбран todayStr
+                if (getLocalDateString(selectedDate) === todayStr) {
+                    setTimeIntervals(updatedIntervals);
+                }
+            }
+        }
+        else {
+            // Просто актуализируем, но тоже только если выбран сегодня
+            if (getLocalDateString(selectedDate) === todayStr) {
+                setTimeIntervals(actualIntervals);
             }
         }
         setStartTime(Date.now());
@@ -228,26 +267,35 @@ const Main = () => {
     };
     const stopTimer = () => {
         console.log('curentDateStop', currentDate);
+        const selectedDateStr = getLocalDateString(currentDay);
         if (!isRunning || !startTime)
             return;
-        const selectedDateStr = getLocalDateString(selectedDate);
         const now = Date.now();
         const elapsedMs = now - startTime;
         const elapsedSeconds = Math.round(elapsedMs / 1000);
         const totalSeconds = savedSeconds + elapsedSeconds;
-        if (selectedDateStr === todayStr) {
-            const newLogItem = {
-                id: Date.now(),
-                time: elapsedMs,
-                start: startTime,
-                color: _variables_module_scss_1.default.orangeColor
-            };
-            const updatedIntervals = saveIntervalTime(timeIntervals, newLogItem);
+        // Берём актуальные интервалы для выбранного дня
+        const dataDay = getDataLocalStorage(keyTimer);
+        const currentData = dataDay.find(day => day.date === todayStr);
+        const actualIntervals = (currentData === null || currentData === void 0 ? void 0 : currentData.timeIntervals) || [];
+        const newLogItem = {
+            id: Date.now(),
+            time: elapsedMs,
+            start: startTime,
+            color: _variables_module_scss_1.default.orangeColor
+        };
+        const updatedIntervals = saveIntervalTime(actualIntervals, newLogItem, new Date());
+        saveSecondsLocal(todayStr, totalSeconds, updatedIntervals);
+        // В state заливаем ТОЛЬКО если выбран именно сегодняшний день
+        if (getLocalDateString(selectedDate) === todayStr) {
             setTimeIntervals(updatedIntervals);
         }
+        // Актуализируем daysData (чтобы при клике по дням данные не затирались)
+        const updatedDays = dataDay.map(day => day.date === todayStr
+            ? Object.assign(Object.assign({}, day), { seconds: totalSeconds, timeIntervals: updatedIntervals }) : day);
+        setDaysData(updatedDays);
         setSavedSeconds(totalSeconds);
         setSeconds(totalSeconds);
-        saveSecondsLocal(todayStr, totalSeconds, timeIntervals);
         setIsRunning(false);
         setTextWork('Вы сейчас отдыхаете');
         setTextRest('');
@@ -553,12 +601,19 @@ const Main = () => {
     };
     // intervals
     function handleColumnClick(date) {
+        const dateStr = getLocalDateString(date);
+        // Блокируем только если это сегодня и таймер запущен
+        if (isRunning && dateStr === todayStr) {
+            alert("Нельзя редактировать активный день, таймер запущен");
+            return;
+        }
         if (date <= currentDay) {
             setSelectedDate(date);
             getColumnDay(date);
         }
     }
     function getColumnDay(date) {
+        setSelectedDate(date); // только меняем дату
         const dataDay = getDataLocalStorage(keyTimer);
         const currentData = dataDay.find(day => day.date === getLocalDateString(date));
         if (currentData && currentData.timeIntervals) {
@@ -568,9 +623,9 @@ const Main = () => {
             setTimeIntervals([]);
         }
     }
-    function saveIntervalTime(arrIntervals, newLogItem) {
+    function saveIntervalTime(arrIntervals, newLogItem, forDate) {
         const update = [...(arrIntervals || []), newLogItem];
-        const dateStr = getLocalDateString(selectedDate);
+        const dateStr = getLocalDateString(forDate);
         saveIntervalLocal(dateStr, update);
         return update;
     }
@@ -587,32 +642,71 @@ const Main = () => {
         saveDataLocalStorage(keyTimer, updated);
     }
     function addInterval() {
+        setIntervalType('work');
         setIsOpenModalAdd(true);
         setStartIntervalHours(0);
         setStartIntervalMinutes(0);
         setEndIntervalHours(0);
         setEndIntervalMinutes(0);
     }
-    function handleAddNewInterval(startHours, startMinutes, endHours, endMinutes, colorInterval, forDate) {
-        // Создаём временные объекты для начала и конца
-        //         const now = new Date();
-        const startDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), startHours, startMinutes);
-        const endDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), endHours, endMinutes);
-        // Разница в миллисекундах
-        const elapsedMs = endDate.getTime() - startDate.getTime();
-        const startInterval = startDate.getTime();
-        // Формируем время старта в формате HH:MM
-        // const startTime = `${String(startHours).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`;
-        // Собираем объект
-        const newLogItem = {
-            id: Date.now(),
-            time: elapsedMs,
-            start: startInterval,
-            color: colorInterval === 'work' ? _variables_module_scss_1.default.orangeColor : _variables_module_scss_1.default.greenColor
-        };
-        const addIntervals = saveIntervalTime(timeIntervals, newLogItem);
-        setTimeIntervals(addIntervals);
-        setIsOpenModalAdd(false); // Закрыть модалку
+    function handleUpdateInterval(id) {
+        let currentInterval = timeIntervals.find(interval => interval.id === id);
+        if (currentInterval) {
+            setIntervalType(colorToType(currentInterval.color));
+            setEditingInterval(currentInterval); // сохраняем что редактируем
+            setStartIntervalHours(new Date(currentInterval.start).getHours());
+            setStartIntervalMinutes(new Date(currentInterval.start).getMinutes());
+            setEndIntervalHours(new Date(currentInterval.start + currentInterval.time).getHours());
+            setEndIntervalMinutes(new Date(currentInterval.start + currentInterval.time).getMinutes());
+            setIsOpenModalAdd(true);
+        }
+    }
+    function handleSaveInterval(startHours, startMinutes, endHours, endMinutes, colorInterval, forDate) {
+        var _a, _b;
+        const dateStr = getLocalDateString(forDate);
+        if (isRunning && dateStr === todayStr) {
+            alert("Нельзя редактировать активный день, таймер запущен");
+            return;
+        }
+        const dayIndex = daysData.findIndex(day => day.date === dateStr);
+        const day = (_a = daysData[dayIndex]) !== null && _a !== void 0 ? _a : { date: dateStr, seconds: 0, timeIntervals: [] };
+        let intervals = [...day.timeIntervals];
+        // Если всё по нулям → удалить
+        if (startHours === 0 && startMinutes === 0 && endHours === 0 && endMinutes === 0) {
+            if (editingInterval) {
+                intervals = intervals.filter(int => int.id !== editingInterval.id);
+                setEditingInterval(null);
+            }
+        }
+        else if (editingInterval) {
+            // === Редактирование ===
+            const startDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), startHours, startMinutes);
+            const endDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), endHours, endMinutes);
+            const elapsedMs = endDate.getTime() - startDate.getTime();
+            intervals = intervals.map(int => int.id === editingInterval.id
+                ? Object.assign(Object.assign({}, int), { start: startDate.getTime(), time: elapsedMs, color: typeToColor(colorInterval) }) : int);
+            setEditingInterval(null);
+        }
+        else {
+            // === Добавление ===
+            const startDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), startHours, startMinutes);
+            const endDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), endHours, endMinutes);
+            const elapsedMs = endDate.getTime() - startDate.getTime();
+            const newLogItem = {
+                id: Date.now(),
+                time: elapsedMs,
+                start: startDate.getTime(),
+                color: typeToColor(colorInterval),
+            };
+            intervals = saveIntervalTime(intervals, newLogItem, forDate);
+        }
+        // Обновляем state
+        const updatedDays = [...daysData];
+        updatedDays[dayIndex] = Object.assign(Object.assign({}, day), { timeIntervals: intervals });
+        setDaysData(updatedDays);
+        // Сохраняем в localStorage
+        saveSecondsLocal(dateStr, (_b = day === null || day === void 0 ? void 0 : day.seconds) !== null && _b !== void 0 ? _b : 0, intervals);
+        setIsOpenModalAdd(false);
     }
     const getTimeIntervals = (id, time, start, color) => {
         const seconds = time / 1000;
@@ -626,11 +720,11 @@ const Main = () => {
         return ((0, jsx_runtime_1.jsxs)("div", { children: [(0, jsx_runtime_1.jsx)("span", { className: Main_module_scss_1.default.time__interval, children: startTimeStr }), (0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.interval, style: {
                         background: color,
                         width: `${widthInPx}px`
-                    } })] }, id));
+                    }, onClick: () => handleUpdateInterval(id) })] }, id));
     };
     return ((0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.main, children: [(0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.box_button, children: [(0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.button, children: [(0, jsx_runtime_1.jsx)(ButtonWork_1.default, { color: _variables_module_scss_1.default.orangeColor, activeColor: _variables_module_scss_1.default.disabledColor, text: "\u041D\u0430\u0447\u0430\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u0443", textClick: '\u0420\u0430\u0431\u043E\u0442\u0430\u044E', onClick: startTimer, isRunning: isRunning, disabled: isRunning }), (0, jsx_runtime_1.jsx)("span", { children: textWork })] }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.button, children: [(0, jsx_runtime_1.jsx)(ButtonWork_1.default, { color: _variables_module_scss_1.default.disabledColor, activeColor: _variables_module_scss_1.default.greenColor, text: "\u041E\u0442\u0434\u044B\u0445\u0430\u044E", textClick: '\u041F\u0440\u0435\u0440\u0432\u0430\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u0443', onClick: stopTimer, isRunning: isRunning, disabled: !isRunning }), (0, jsx_runtime_1.jsx)("span", { children: textRest })] })] }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.chart, children: [(0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.chart_field, children: [(0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.timer, children: formatNumber(seconds) }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.time, children: [(0, jsx_runtime_1.jsxs)("p", { children: ["16", (0, jsx_runtime_1.jsx)("span", { children: "\u0447" })] }), (0, jsx_runtime_1.jsx)("hr", { className: Main_module_scss_1.default.time__top }), (0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsxs)("p", { children: ["8", (0, jsx_runtime_1.jsx)("span", { children: "\u0447" })] }) }), (0, jsx_runtime_1.jsxs)("p", { children: ["1", (0, jsx_runtime_1.jsx)("span", { children: "\u0447" })] }), (0, jsx_runtime_1.jsx)("hr", { className: Main_module_scss_1.default.time__bottom })] }), (0, jsx_runtime_1.jsx)(EditTime_1.default, { hours: hoursInput, minutes: minutesInput, selectedDate: selectedDate, isOpenModal: isOpenModalEdit, onClick: handleInputChange, onClose: closeModal, onHoursChange: setHoursInput, onMinutesChange: setMinutesInput, onHoursCurrentMonth: getHoursCurrentMonth }), (0, jsx_runtime_1.jsxs)("div", { className: `${Main_module_scss_1.default.info__toolkit} ${isOpenToolkit ? Main_module_scss_1.default.visible__toolkit : ''}`, children: [(0, jsx_runtime_1.jsx)("button", { className: Main_module_scss_1.default.close__toolkit, onClick: closeModalToolkit }), (0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.text__toolkit, children: ["\u0421 ", rangeStart === null || rangeStart === void 0 ? void 0 : rangeStart.toLocaleDateString(), " \u043F\u043E ", rangeEnd === null || rangeEnd === void 0 ? void 0 : rangeEnd.toLocaleDateString(), " \u0432\u044B \u043E\u0442\u0440\u0430\u0431\u043E\u0442\u0430\u043B\u0438 ", formatHours(workedSeconds)] })] })] }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar, children: [(0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__container, children: arrShowDays.map((date, index) => ((0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__day, children: [getColumns(date), (0, jsx_runtime_1.jsx)(DayWeek_1.default, { date: date, onClick: handleDayClick, selectedDate: selectedDate }, index), (0, jsx_runtime_1.jsx)("div", { className: `${Main_module_scss_1.default.day__num}
                                     ${date.getMonth() !== numMonth ? Main_module_scss_1.default.day__pale : ''}
                                     ${rangeStart === date ? Main_module_scss_1.default.day__mark : ''}
-                                    ${rangeEnd === date ? Main_module_scss_1.default.day__mark : ''}`, onClick: () => handleDateClick(date), children: (0, jsx_runtime_1.jsx)("span", { children: date.getDate() }) })] }, index))) }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__month, children: [(0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.hours, children: [(0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0437\u0430 \u043F\u0440\u043E\u0448\u043B\u0443\u044E \u043D\u0435\u0434\u0435\u043B\u044E: ", (0, jsx_runtime_1.jsx)("span", { children: hoursPrevWeek })] }), (0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0432 \u0441\u0440\u0435\u0434\u043D\u0435\u043C \u0437\u0430 \u0434\u0435\u043D\u044C: ", (0, jsx_runtime_1.jsx)("span", { children: counterWeekDay })] })] }), (0, jsx_runtime_1.jsx)("span", { className: Main_module_scss_1.default.month, children: showMonth }), (0, jsx_runtime_1.jsxs)("div", { className: `${Main_module_scss_1.default.hours} ${Main_module_scss_1.default.hours_month}`, children: [(0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0437\u0430 ", showMonth, ": ", (0, jsx_runtime_1.jsx)("span", { children: hoursPrevMonth })] }), (0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0432 \u0441\u0440\u0435\u0434\u043D\u0435\u043C \u0437\u0430 \u0434\u0435\u043D\u044C: ", (0, jsx_runtime_1.jsx)("span", { children: counterMonthDay })] })] })] }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__intervals, children: [(0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__intervals_date, children: (0, formatDate_1.formatDate)(selectedDate) }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__intervals_field, children: [(0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__intervals_box, children: (0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__intervals_container, children: timeIntervals.map((int) => (getTimeIntervals(int.id, int.time, int.start, int.color))) }) }), (0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__intervals_add, onClick: addInterval })] })] })] }), (0, jsx_runtime_1.jsx)("button", { className: `${Main_module_scss_1.default.chart__arrow} ${Main_module_scss_1.default.chart__arrow_left}`, onClick: showPrevDays }), (0, jsx_runtime_1.jsx)("button", { className: `${Main_module_scss_1.default.chart__arrow} ${Main_module_scss_1.default.chart__arrow_right}`, onClick: showNextDays })] }), (0, jsx_runtime_1.jsx)(AddInterval_1.default, { startHours: startIntervalHours, startMinutes: starIntervaltMinutes, endHours: endIntervalHours, endMinutes: endIntervalMinutes, selectedDate: selectedDate, isOpenModalAdd: isOpenModalAdd, onClick: handleAddNewInterval, onClose: closeModal, onStartHoursChange: setStartIntervalHours, onStartMinutesChange: setStartIntervalMinutes, onEndHoursChange: setEndIntervalHours, onEndMinutesChange: setEndIntervalMinutes, onHoursCurrentMonth: getHoursCurrentMonth })] }));
+                                    ${rangeEnd === date ? Main_module_scss_1.default.day__mark : ''}`, onClick: () => handleDateClick(date), children: (0, jsx_runtime_1.jsx)("span", { children: date.getDate() }) })] }, index))) }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__month, children: [(0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.hours, children: [(0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0437\u0430 \u043F\u0440\u043E\u0448\u043B\u0443\u044E \u043D\u0435\u0434\u0435\u043B\u044E: ", (0, jsx_runtime_1.jsx)("span", { children: hoursPrevWeek })] }), (0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0432 \u0441\u0440\u0435\u0434\u043D\u0435\u043C \u0437\u0430 \u0434\u0435\u043D\u044C: ", (0, jsx_runtime_1.jsx)("span", { children: counterWeekDay })] })] }), (0, jsx_runtime_1.jsx)("span", { className: Main_module_scss_1.default.month, children: showMonth }), (0, jsx_runtime_1.jsxs)("div", { className: `${Main_module_scss_1.default.hours} ${Main_module_scss_1.default.hours_month}`, children: [(0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0437\u0430 ", showMonth, ": ", (0, jsx_runtime_1.jsx)("span", { children: hoursPrevMonth })] }), (0, jsx_runtime_1.jsxs)("p", { className: Main_module_scss_1.default.hours__prev, children: ["\u0427\u0430\u0441\u044B \u0432 \u0441\u0440\u0435\u0434\u043D\u0435\u043C \u0437\u0430 \u0434\u0435\u043D\u044C: ", (0, jsx_runtime_1.jsx)("span", { children: counterMonthDay })] })] })] }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__intervals, children: [(0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__intervals_date, children: (0, formatDate_1.formatDate)(selectedDate) }), (0, jsx_runtime_1.jsxs)("div", { className: Main_module_scss_1.default.calendar__intervals_field, children: [(0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__intervals_box, children: (0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__intervals_container, children: timeIntervals.map((int) => (getTimeIntervals(int.id, int.time, int.start, int.color))) }) }), (0, jsx_runtime_1.jsx)("div", { className: Main_module_scss_1.default.calendar__intervals_add, onClick: addInterval })] })] })] }), (0, jsx_runtime_1.jsx)("button", { className: `${Main_module_scss_1.default.chart__arrow} ${Main_module_scss_1.default.chart__arrow_left}`, onClick: showPrevDays }), (0, jsx_runtime_1.jsx)("button", { className: `${Main_module_scss_1.default.chart__arrow} ${Main_module_scss_1.default.chart__arrow_right}`, onClick: showNextDays })] }), (0, jsx_runtime_1.jsx)(AddInterval_1.default, { startHours: startIntervalHours, startMinutes: starIntervaltMinutes, endHours: endIntervalHours, endMinutes: endIntervalMinutes, selectedDate: selectedDate, isOpenModalAdd: isOpenModalAdd, onClick: handleSaveInterval, onClose: closeModal, onStartHoursChange: setStartIntervalHours, onStartMinutesChange: setStartIntervalMinutes, onEndHoursChange: setEndIntervalHours, onEndMinutesChange: setEndIntervalMinutes, onHoursCurrentMonth: getHoursCurrentMonth, intervalType: intervalType, onIntervalTypeChange: setIntervalType })] }));
 };
 exports.default = Main;
