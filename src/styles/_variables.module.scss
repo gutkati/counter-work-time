@@ -15,10 +15,10 @@ $box-shadow: -8px 8px 6px 0 rgba(0, 0, 0, 0.25);
 
 :export {
   orangeColor: $orange-color;
+  greenColor: $light-green-color;
+  redColor: $red-color;
   gradientButton: $gradient-button;
   hoverColorWork: $red-color;
   hoverColorRest: $gradient-button-hover;
   disabledColor: $disabled-color;
-  greenColor: $light-green-color
-
 }

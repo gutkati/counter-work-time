@@ -97,7 +97,7 @@ const AddInterval: React.FC<AddIntervalProps> = ({
                 <span>{selectedDate ? formatDate(selectedDate) : ''}</span>
             </div>
 
-            <h3 className={styles.title}>Время начало интервала</h3>
+            <h3 className={styles.title}>Время начала интервала</h3>
             <button className={styles.close} onClick={onClose}></button>
 
             <form className={styles.form}>
@@ -126,7 +126,7 @@ const AddInterval: React.FC<AddIntervalProps> = ({
                     </label>
                 </div>
 
-                <h3 className={styles.title}>Время окончание интервала</h3>
+                <h3 className={styles.title}>Время окончания интервала</h3>
                 <div className={styles.box__input}>
                     <label htmlFor="">
                         Часы
