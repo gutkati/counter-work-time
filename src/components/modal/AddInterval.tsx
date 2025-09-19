@@ -9,15 +9,13 @@ type AddIntervalProps = {
     endMinutes: number;
     selectedDate: Date;
     isOpenModalAdd: boolean;
-    onClick?: (startHours: number, startMinutes: number, endHours: number, endMinutes: number, intervalType: 'work' | 'rest', selectedDate: Date) => void;
+    onClick?: (startHours: number, startMinutes: number, endHours: number, endMinutes: number, selectedDate: Date) => void;
     onClose: () => void;
     onStartHoursChange: (value: number) => void;
     onStartMinutesChange: (value: number) => void;
     onEndHoursChange: (value: number) => void;
     onEndMinutesChange: (value: number) => void;
     onHoursCurrentMonth: () => void;
-    intervalType: 'work' | 'rest';
-    onIntervalTypeChange: (value: 'work' | 'rest') => void;
 }
 
 const AddInterval: React.FC<AddIntervalProps> = ({
@@ -34,8 +32,6 @@ const AddInterval: React.FC<AddIntervalProps> = ({
                                                      onEndHoursChange,
                                                      onEndMinutesChange,
                                                      onHoursCurrentMonth,
-                                                     intervalType,
-                                                     onIntervalTypeChange
                                                  }) => {
 
     const [errorHours, setErrorHours] = useState<string>('');
@@ -82,11 +78,11 @@ const AddInterval: React.FC<AddIntervalProps> = ({
         }
     }
 
-    function saveUpdateTime(startHours: number, startMinutes: number, endHours: number, endMinutes: number, intervalType: 'work' | 'rest', selectedDate: Date) {
+    function saveUpdateTime(startHours: number, startMinutes: number, endHours: number, endMinutes: number, selectedDate: Date) {
         if (!selectedDate) return
 
         if (validateHours(startHours) && validateMinutes(startMinutes)) {
-            onClick?.(startHours, startMinutes, endHours, endMinutes, intervalType, selectedDate)
+            onClick?.(startHours, startMinutes, endHours, endMinutes, selectedDate)
         }
     }
 
@@ -152,30 +148,27 @@ const AddInterval: React.FC<AddIntervalProps> = ({
                     </label>
                 </div>
 
-                <div className={styles.box__radio}>
-                    <label>
-                        <input
-                            type='radio'
-                            name='intervaleType'
-                            value='work'
-                            checked={intervalType === 'work'}
-                            onChange={() => onIntervalTypeChange('work')}
-                        />
-                        Работа
-                    </label>
+                {/*<div className={styles.box__radio}>*/}
+                {/*    <label>*/}
+                {/*        <input*/}
+                {/*            type='radio'*/}
+                {/*            name='intervaleType'*/}
+                {/*            value='work'*/}
+                {/*        />*/}
+                {/*        Работа*/}
+                {/*    </label>*/}
 
-                    <label>
-                        <input type='radio'
-                               name='intervaleType'
-                               value='rest'
-                               checked={intervalType === 'rest'}
-                               onChange={() => onIntervalTypeChange('rest')}/>
-                        Отдых
-                    </label>
+                {/*    <label>*/}
+                {/*        <input type='radio'*/}
+                {/*               name='intervaleType'*/}
+                {/*               value='rest'*/}
+                {/*               />*/}
+                {/*        Отдых*/}
+                {/*    </label>*/}
 
-                </div>
+                {/*</div>*/}
                 <button type='button' className={styles.btn}
-                        onClick={() => saveUpdateTime(startHours, startMinutes, endHours, endMinutes, intervalType, selectedDate)}>Сохранить
+                        onClick={() => saveUpdateTime(startHours, startMinutes, endHours, endMinutes, selectedDate)}>Сохранить
                 </button>
             </form>
         </div>

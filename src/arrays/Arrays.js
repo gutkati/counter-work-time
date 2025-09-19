@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.arrDays = exports.arrMonths = void 0;
+exports.hoursTable = exports.arrDays = exports.arrMonths = void 0;
 exports.arrMonths = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',];
 exports.arrDays = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+exports.hoursTable = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'];

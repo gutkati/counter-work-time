@@ -4,7 +4,7 @@ import ButtonWork from "../buttons/buttonWork/ButtonWork";
 import color from "../../styles/_variables.module.scss";
 import DayWeek from "../day/DayWeek";
 import {useMediaQuery} from "react-responsive";
-import {arrMonths} from "../../arrays/Arrays";
+import {arrMonths, hoursTable} from "../../arrays/Arrays";
 import EditTime from "../modal/EditTime";
 import {formatDate} from "../../utils/formatDate";
 import AddInterval from "../modal/AddInterval";
@@ -16,7 +16,6 @@ type TimeInterval = {
     date: string,
     time: number,
     start: number,
-    color: string,
 }
 
 type TimerData = {
@@ -120,7 +119,6 @@ const Main = () => {
                         date: nowDate,
                         time: 0,
                         start: now,
-                        color: color.orangeColor,
                     };
 
                     saveSecondsLocal(nowDate, 0, [newWork])
@@ -129,12 +127,10 @@ const Main = () => {
                     setSeconds(0)
                     setSavedSeconds(0)
                     setStartTime(now)
-
-                    // !!!!!
                     setSelectedDate(new Date())
                     setTimeIntervals([newWork])
                 }
-                setCurrentDate(nowDate)
+                //setCurrentDate(nowDate)
             }
             checkDateChange()
 
@@ -143,7 +139,7 @@ const Main = () => {
             }, 60000);
 
             return () => clearInterval(interval);
-        }, [currentDate, seconds, todayStr, timeIntervals]);
+        }, [seconds, todayStr, timeIntervals]);
 
         // timer
         // Загрузка данных из localStorage при монтировании
@@ -187,7 +183,6 @@ const Main = () => {
                             date: currentDateStr,
                             time: 0,
                             start: now,
-                            color: color.orangeColor,
                         };
                         saveSecondsLocal(currentDateStr, 0, [newWork])
 
@@ -211,9 +206,6 @@ const Main = () => {
                         if (!prev.length) return prev;
                         const updated = [...prev];
                         const last = updated[updated.length - 1];
-                        if (last.color === color.orangeColor) {
-                            last.time = now - last.start; // обновляем длительность
-                        }
                         return updated;
                     });
                 };
@@ -260,23 +252,6 @@ const Main = () => {
                 setIsOpenToolkit(true)
             }
         }, [rangeStart, rangeEnd])
-
-// useEffect(() => {
-//     if (!selectedDate) return;
-//     const dataDay: TimerData[] = getDataLocalStorage(keyTimer);
-//     const currentData = dataDay.find(day => day.date === getLocalDateString(selectedDate));
-//     if (currentData && currentData.timeIntervals) {
-//         setTimeIntervals(currentData.timeIntervals);
-//     } else {
-//         setTimeIntervals([]);
-//     }
-// }, [selectedDate]);
-
-        // useEffect(() => {
-        //     if (!selectedDate) return;
-        //     const currentDay = daysData.find(day => day.date === getLocalDateString(selectedDate));
-        //     setTimeIntervals(currentDay?.timeIntervals || []);
-        // }, [selectedDate, daysData]);
 
 // timer
         const formatNumber = (totalSeconds: number) => {
@@ -327,67 +302,29 @@ const Main = () => {
         }
 
         const startTimer = () => {
-            const selectedDateStr = getLocalDateString(currentDay)
-            if (isRunning && selectedDateStr === todayStr) return;
-
+            console.log('timeIntervals', timeIntervals)
             const now = Date.now();
-            const nowDateStr = getLocalDateString(new Date());
+            const dateStr = getLocalDateString(new Date());
+            if (isRunning) return;
 
             // Берём актуальные интервалы для текущего дня
             const dataDay: TimerData[] = getDataLocalStorage(keyTimer);
-            const currentData = dataDay.find(day => day.date === selectedDateStr);
-            const actualIntervals = currentData?.timeIntervals || [];
+            const currentData = dataDay.find(d => d.date === dateStr);
+            const intervals = currentData?.timeIntervals || [];
 
-            let updatedIntervals = [...actualIntervals];
-
-            // === Проверяем, был ли перерыв и в том же ли дне он закончился ===
-            if (lastStopTime && updatedIntervals.length !== 0) {
-                const stopDateStr = getLocalDateString(new Date(lastStopTime));
-
-                // Перерыв в том же дне → сохраняем зелёный интервал
-                if (stopDateStr === nowDateStr) {
-                    const restDuration = now - lastStopTime;
-                    if (restDuration > 1000) {
-                        const restLogItem: TimeInterval = {
-                            id: nanoid(16),
-                            date: nowDateStr,
-                            time: 0,
-                            start: lastStopTime,
-                            color: color.greenColor // отдых
-                        };
-                        updatedIntervals = saveIntervalTime(updatedIntervals, restLogItem, new Date());
-                    }
-                }
-                // Если дата изменилась → ничего не добавляем, т.к. новый день начинается с работы
-            }
-
-            if (updatedIntervals.length === 0) {
-                const newWorkInterval: TimeInterval = {
-                    id: nanoid(16),
-                    date: currentDate,
-                    time: 0,
-                    start: now,
-                    color: color.orangeColor
-                };
-            }
-
-            // 🔹 Создаём новый рабочий интервал
-            const newWorkInterval: TimeInterval = {
+            // Создаём новый рабочий интервал
+            const newWork: TimeInterval = {
                 id: nanoid(16),
-                date: currentDate,
+                date: dateStr,
                 time: 0,
                 start: now,
-                color: color.orangeColor
             };
 
-            updatedIntervals = [...updatedIntervals, newWorkInterval];
+            const updatedIntervals = [...intervals, newWork];
+            //saveIntervalLocal(dateStr, updatedIntervals);
 
-            // Просто актуализируем, но тоже только если выбран сегодня
-            if (getLocalDateString(selectedDate) === todayStr) {
-                setTimeIntervals(updatedIntervals);
-            }
-
-            setStartTime(Date.now())
+            setTimeIntervals(updatedIntervals);
+            setStartTime(now)
             setSavedSeconds(seconds)
             setIsRunning(true)
             setTextRest('Вы сейчас работаете')
@@ -395,41 +332,42 @@ const Main = () => {
         }
 
         const stopTimer = () => {
-            console.log('curentDateStop', currentDate)
+            if (!isRunning || !startTime) return;
 
-            const selectedDateStr = getLocalDateString(currentDay)
-            if (!isRunning || !startTime) return
 
-            const now = Date.now()
-            const elapsedMs = now - startTime
-            const elapsedSeconds = Math.round(elapsedMs / 1000)
-            const totalSeconds = savedSeconds + elapsedSeconds
+            const now = Date.now();
+            const elapsed = now - startTime;
 
-            // Берём актуальные интервалы для выбранного дня
+            const dateStr = getLocalDateString(new Date());
             const dataDay: TimerData[] = getDataLocalStorage(keyTimer);
-            const currentData = dataDay.find(day => day.date === todayStr);
-            const actualIntervals = currentData?.timeIntervals || [];
+            const currentData = dataDay.find(d => d.date === dateStr);
+            let intervals = currentData?.timeIntervals || [];
 
-            // 🔹 обновляем последний рабочий интервал
-            const updatedIntervals = actualIntervals.map((int, i, arr) =>
-                i === arr.length - 1 && int.color === color.orangeColor
-                    ? {...int, time: elapsedMs}
-                    : int
-            );
+            // Проверка: если интервал < 1 минуты → не сохраняем его
+            if (elapsed < 60000) {
+                console.warn("Интервал меньше минуты — не сохраняем");
+                // Просто убираем последний "пустой" интервал (с time=0)
+                // intervals = intervals.filter(int => int.time > 0);
+                setTimeIntervals(prev => prev.filter(int => int.time > 0));
 
-            saveSecondsLocal(todayStr, totalSeconds, updatedIntervals)
-// В state заливаем ТОЛЬКО если выбран именно сегодняшний день
-            if (getLocalDateString(selectedDate) === todayStr) {
-                setTimeIntervals(updatedIntervals);
+                setIsRunning(false);
+                setTextWork("Вы сейчас отдыхаете");
+                setTextRest("");
+                setLastStopTime(now);
+                return;
             }
 
-            // Актуализируем daysData (чтобы при клике по дням данные не затирались)
-            const updatedDays = dataDay.map(day =>
-                day.date === todayStr
-                    ? {...day, seconds: totalSeconds, timeIntervals: updatedIntervals}
-                    : day
+            // Закрываем последний интервал
+            intervals = intervals.map(int =>
+                int.time === 0 ? {...int, time: now - int.start} : int
             );
-            setDaysData(updatedDays);
+
+            const totalSeconds = (currentData?.seconds ?? 0) + Math.round(elapsed / 1000);
+
+            saveSecondsLocal(dateStr, totalSeconds, intervals);
+
+            setTimeIntervals(intervals);
+            //setDaysData(updatedDays);
 
             setSavedSeconds(totalSeconds)
             setSeconds(totalSeconds)
@@ -437,7 +375,6 @@ const Main = () => {
             setTextWork('Вы сейчас отдыхаете')
             setTextRest('')
             getHoursCurrentMonth()
-
             setLastStopTime(now)
         }
 
@@ -823,6 +760,18 @@ const Main = () => {
 
 // intervals
 
+        // Тогда текущая позиция в пикселях:
+
+        function getOffsetPx(timestamp: number): number {
+            const date = new Date(timestamp);
+            const hours = date.getHours();
+            const minutes = date.getMinutes();
+            const seconds = date.getSeconds();
+
+            const totalMinutes = hours * 60 + minutes + seconds / 60;
+            return (totalMinutes / (24 * 60)) * 960; // масштабируем
+        }
+
         function handleColumnClick(date: Date) {
             const dateStr = getLocalDateString(date);
             // Блокируем только если это сегодня и таймер запущен
@@ -884,7 +833,6 @@ const Main = () => {
 
             let currentInterval = timeIntervals.find(interval => interval.id === id)
             if (currentInterval) {
-                setIntervalType(colorToType(currentInterval.color))
                 setEditingInterval(currentInterval); // сохраняем что редактируем
                 setStartIntervalHours(new Date(currentInterval.start).getHours());
                 setStartIntervalMinutes(new Date(currentInterval.start).getMinutes());
@@ -899,7 +847,7 @@ const Main = () => {
             startMinutes: number,
             endHours: number,
             endMinutes: number,
-            colorInterval: 'work' | 'rest',
+            //colorInterval: 'work' | 'rest',
             forDate: Date
         ) {
 
@@ -926,9 +874,11 @@ const Main = () => {
                 const endDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), endHours, endMinutes);
                 const elapsedMs = endDate.getTime() - startDate.getTime();
 
+                if (elapsedMs < 60000) return;
+
                 intervals = intervals.map(int =>
                     int.id === editingInterval.id
-                        ? {...int, time: elapsedMs, start: startDate.getTime(), color: typeToColor(colorInterval)}
+                        ? {...int, time: elapsedMs, start: startDate.getTime()}
                         : int
                 );
 
@@ -944,7 +894,6 @@ const Main = () => {
                     date: dateStr,
                     time: elapsedMs,
                     start: startDate.getTime(),
-                    color: typeToColor(colorInterval),
                 };
 
                 intervals = saveIntervalTime(intervals, newLogItem, forDate);
@@ -962,73 +911,8 @@ const Main = () => {
 
             // Сохраняем в localStorage
             saveSecondsLocal(dateStr, day?.seconds ?? 0, intervals);
-
             setIsOpenModalAdd(false);
         }
-
-        const getIntervalWork = (id: number, date: string, color: string) => {
-            let arrData: TimerData[] = getDataLocalStorage(keyTimer)
-            let elDate: any = arrData.find(el => el.date === date)
-            let widthInPx = 50
-            if (elDate && elDate.seconds > 0) {
-                const workedHours = elDate.seconds / secondsInHour
-
-                if (elDate.seconds > 3600) {
-                    widthInPx = workedHours * HOUR_HEIGHT_PX
-                }
-
-                return (
-                    <div
-                        className={styles.interval}
-                        style={{
-                            background: color,
-                            width: `${widthInPx}px`
-                        }}
-                        onClick={() => handleUpdateInterval(id)}
-                    >
-                    </div>
-                )
-            } else {
-                return <div className={styles.calendar__column}></div>
-            }
-        }
-
-
-        const renderIntervals = (date: Date) => {
-            const arrData: TimerData[] = getDataLocalStorage(keyTimer);
-            const dateStr = getLocalDateString(date);
-            const elDate = arrData.find(el => el.date === dateStr);
-
-            if (!elDate || !elDate.timeIntervals) {
-                return <div className={styles.calendar__intervals_empty}></div>;
-            }
-
-            return (
-                <div className={styles.calendar__intervals_container}>
-                    {elDate.timeIntervals.map((int: TimeInterval) => (
-                        <div key={int.id} className={styles.intervalWrapper}>
-          <span className={styles.time__interval}>
-            {int.start
-                ? new Date(int.start).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                })
-                : ''}
-          </span>
-                            <div
-                                className={styles.interval}
-                                style={{
-                                    background: int.color,
-                                    width: `${Math.max(50, Math.floor(int.time / 1000 / 60))}px`
-                                }}
-                                onClick={() => handleUpdateInterval(int.id)}
-                            ></div>
-                        </div>
-                    ))}
-                </div>
-            );
-        };
 
         return (
             <div className={styles.main}>
@@ -1145,11 +1029,14 @@ const Main = () => {
                                     </div>
                                 )}
 
-                                <div className={styles.hours__info}>
+                                <div
+                                    className={styles.hours__info}
+                                    onClick={() => setIsVisibleWeek(prev => !prev)}
+                                >
                                     <p className={styles.hours__text}>Часы за прошлую неделю</p>
                                     <div
                                         className={styles.toggleBtn}
-                                        onClick={() => setIsVisibleWeek(prev => !prev)}
+
                                     >
                                         {isVisibleWeek ? "▲" : "▼"}
                                     </div>
@@ -1172,11 +1059,13 @@ const Main = () => {
                                     </div>
                                 )}
 
-                                <div className={`${styles.hours__info} ${styles.hours__info_right}`}>
+                                <div
+                                    className={`${styles.hours__info} ${styles.hours__info_right}`}
+                                    onClick={() => setIsVisibleMonth(prev => !prev)}
+                                >
                                     <p className={styles.hours__text}>Часы за {showMonth}</p>
                                     <div
                                         className={styles.toggleBtn}
-                                        onClick={() => setIsVisibleMonth(prev => !prev)}
                                     >
                                         {isVisibleMonth ? "▲" : "▼"}
                                     </div>
@@ -1191,7 +1080,48 @@ const Main = () => {
                             </div>
                             <div className={styles.calendar__intervals_field}>
                                 <div className={styles.calendar__intervals_box}>
-                                    {renderIntervals(selectedDate)}
+                                    {/*{renderIntervals(selectedDate)}*/}
+
+                                    <div className={styles.intervals__work}>
+                                        {timeIntervals.map((int, i) => {
+                                            // Конец интервала: либо start + time, либо "прямо сейчас" если time = 0 (активный)
+                                            const end = int.time > 0 ? int.start + int.time : Date.now();
+
+                                            // Длительность интервала в секундах
+                                            const durationSec = (end - int.start) / 1000;
+
+                                            // Если меньше минуты — пропускаем
+                                            if (durationSec < 60) return null;
+
+                                            // Функция для перевода timestamp → px по шкале (например, 960px = сутки)
+                                            const left = getOffsetPx(int.start);
+                                            const width = getOffsetPx(end) - left;
+
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    className={styles.workBar}
+                                                    style={{
+                                                        left: `${left}px`,
+                                                        width: `${width}px`,
+                                                    }}
+                                                    onClick={() => handleUpdateInterval(int.id)}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className={styles.interval__hours}>
+                                        {hoursTable.map((hour, ind) => (
+                                            <div key={ind}
+                                                 className={styles.interval__time}
+                                            >
+                                                <div className={styles.interval__risk}></div>
+                                                <p>{hour}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+
                                 </div>
                                 <div
                                     className={styles.calendar__intervals_add}
@@ -1226,8 +1156,6 @@ const Main = () => {
                              onEndHoursChange={setEndIntervalHours}
                              onEndMinutesChange={setEndIntervalMinutes}
                              onHoursCurrentMonth={getHoursCurrentMonth}
-                             intervalType={intervalType}
-                             onIntervalTypeChange={setIntervalType}
                 />
             </div>
         )
